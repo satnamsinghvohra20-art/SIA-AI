@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Sia Companion</string>
+    <string name="accessibility_service_description">Lets Sia carry out voice commands on this phone — tapping, typing, and reading the screen in any app, the same way TalkBack does. Only acts on commands sent by your own paired Sia server.</string>
+</resources>

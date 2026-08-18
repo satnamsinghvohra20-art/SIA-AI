@@ -1,0 +1,39 @@
+{
+  "current_task": {
+    "id": null,
+    "goal": null,
+    "status": "idle",
+    "started_at": null
+  },
+  "plan": [],
+  "decisions_log": [],
+  "chat_summary": "",
+  "recent_messages": [],
+  "blockers": [
+    {
+      "at": "2026-08-18T04:27:49.360Z",
+      "issue": "/api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example)."
+    },
+    {
+      "at": "2026-08-18T04:27:54.752Z",
+      "issue": "/api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example)."
+    },
+    {
+      "at": "2026-08-18T04:28:04.194Z",
+      "issue": "/api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example)."
+    },
+    {
+      "at": "2026-08-18T04:28:05.781Z",
+      "issue": "/api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example)."
+    },
+    {
+      "at": "2026-08-18T04:28:27.043Z",
+      "issue": "/api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example)."
+    },
+    {
+      "at": "2026-08-18T04:28:27.993Z",
+      "issue": "/api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example)."
+    }
+  ],
+  "last_updated": "2026-08-18T04:28:28.012Z"
+}
