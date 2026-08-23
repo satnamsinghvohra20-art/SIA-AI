@@ -1,0 +1,25 @@
+{
+  "current_task": {
+    "id": null,
+    "goal": null,
+    "status": "idle",
+    "started_at": null
+  },
+  "plan": [],
+  "decisions_log": [],
+  "chat_summary": "",
+  "recent_messages": [
+    {
+      "role": "user",
+      "content": "open whatsapp web",
+      "at": "2026-08-23T15:39:00.271Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Opened WhatsApp Web in Microsoft Edge, sir.",
+      "at": "2026-08-23T15:39:00.279Z"
+    }
+  ],
+  "blockers": [],
+  "last_updated": "2026-08-23T15:39:00.279Z"
+}
