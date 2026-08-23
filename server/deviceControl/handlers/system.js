@@ -151,20 +151,22 @@ function run(cmd, args = []) {
   });
 }
 
-async function openUrl({ url, browser = "edge" }) {
+async function openUrl({ url, browser = "default" }) {
   const fullUrl = normalizeUrl(url);
-  const b = String(browser || "edge").toLowerCase();
+  const b = String(browser || "default").toLowerCase();
 
   if (PLATFORM === "win32") {
-    // Default to Microsoft Edge
-    if (b.includes("chrome")) {
+    // Open in user's active/default browser (Google Chrome, Edge, etc.) and bring to foreground
+    if (b === "chrome") {
       await run("cmd.exe", ["/c", "start", "chrome", fullUrl]).catch(() =>
-        run("cmd.exe", ["/c", "start", "msedge", fullUrl])
+        run("cmd.exe", ["/c", "start", "", fullUrl])
       );
-    } else {
+    } else if (b === "edge") {
       await run("cmd.exe", ["/c", "start", "msedge", fullUrl]).catch(() =>
         run("cmd.exe", ["/c", "start", "", fullUrl])
       );
+    } else {
+      await run("cmd.exe", ["/c", "start", "", fullUrl]);
     }
   } else if (PLATFORM === "darwin") {
     if (b.includes("chrome")) {
@@ -172,12 +174,12 @@ async function openUrl({ url, browser = "edge" }) {
     } else if (b.includes("safari")) {
       await run("open", ["-a", "Safari", fullUrl]).catch(() => run("open", [fullUrl]));
     } else {
-      await run("open", ["-a", "Microsoft Edge", fullUrl]).catch(() => run("open", [fullUrl]));
+      await run("open", [fullUrl]);
     }
   } else {
-    await run("microsoft-edge", [fullUrl]).catch(() => run("xdg-open", [fullUrl]));
+    await run("xdg-open", [fullUrl]).catch(() => run("google-chrome", [fullUrl]));
   }
-  return { openedUrl: fullUrl, browser: "Microsoft Edge" };
+  return { openedUrl: fullUrl, browser: "Browser" };
 }
 
 async function searchWeb({ query, engine = "google" }) {
@@ -397,20 +399,47 @@ async function openApp({ app, query }) {
     }
   }
 
-  // 1. Check if it's a direct URL or domain name
-  if (name.startsWith("http://") || name.startsWith("https://") || name.includes(".com") || name.includes(".org") || name.includes(".net") || name.includes(".io") || name.includes(".in") || name.includes(".co") || name.includes(".ai")) {
-    const directUrl = name.startsWith("http") ? name : `https://${name}`;
-    return openUrl({ url: directUrl, browser: "edge" });
+  // 1. Dedicated WhatsApp Launcher (Desktop + Web)
+  if (name === "whatsapp" || name === "whatsapp web") {
+    if (PLATFORM === "win32") {
+      const psLaunch = `
+Add-Type -TypeDefinition '
+using System;
+using System.Runtime.InteropServices;
+public class WinTop {
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+}';
+Start-Process "whatsapp:" -ErrorAction SilentlyContinue
+Start-Sleep -Milliseconds 350
+$p = Get-Process | Where-Object { $_.ProcessName -match 'WhatsApp' -and $_.MainWindowHandle -ne [IntPtr]::Zero } | Select-Object -First 1
+if ($p) {
+  [WinTop]::ShowWindowAsync($p.MainWindowHandle, 9)
+  [WinTop]::SetForegroundWindow($p.MainWindowHandle)
+}
+`;
+      await run("powershell.exe", ["-NoProfile", "-Command", psLaunch]).catch(() => {});
+    }
+
+    const waUrl = explicitQuery ? `https://web.whatsapp.com/send?text=${encodeURIComponent(explicitQuery)}` : "https://web.whatsapp.com";
+    await openUrl({ url: waUrl });
+    return { opened: "WhatsApp", mode: "whatsapp_launched", url: waUrl };
   }
 
-  // 2. Check if it's a known web service or deep service URL
+  // 2. Check if it's a direct URL or domain name
+  if (name.startsWith("http://") || name.startsWith("https://") || name.includes(".com") || name.includes(".org") || name.includes(".net") || name.includes(".io") || name.includes(".in") || name.includes(".co") || name.includes(".ai")) {
+    const directUrl = name.startsWith("http") ? name : `https://${name}`;
+    return openUrl({ url: directUrl });
+  }
+
+  // 3. Check if it's a known web service or deep service URL
   const deepUrl = buildDeepServiceUrl(name, explicitQuery);
   const webUrl = WEB_SERVICES[name];
 
   if (deepUrl || webUrl) {
     const targetUrl = deepUrl || webUrl;
-    await openUrl({ url: targetUrl, browser: "edge" });
-    return { opened: app, mode: "edge_website", url: targetUrl };
+    await openUrl({ url: targetUrl });
+    return { opened: app, mode: "website_opened", url: targetUrl };
   }
 
   // 3. Check for native Desktop application (e.g. calc, notepad, cmd, explorer)

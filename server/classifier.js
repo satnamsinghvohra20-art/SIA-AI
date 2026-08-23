@@ -190,6 +190,8 @@ const DEVICE_CONTROL_PATTERNS = [
   /\b(type|press|click|scroll|tap|swipe)\s+([a-z0-9\.\s]+)/i,
   /\b(search|find|google|browse|look\s+up)\s+(on|in|for)\s+(edge|chrome|google|youtube|spotify|amazon|flipkart|reddit|wikipedia|web|maps|internet)\b/i,
   /\b(search\s+web|search\s+the\s+web|browse\s+to)\b/i,
+  /\b(not\s+open|not\s+opened|didn't\s+open|did\s+not\s+open|haven't\s+opened|have\s+not\s+opened|can't\s+see|cannot\s+see|open\s+it|open\s+again|do\s+it\s+again|try\s+again)\b/i,
+  /\b(whatsapp|youtube|instagram|spotify|flipkart|amazon|netflix)\s+(is\s+not|not|again|please|now)\b/i,
 ];
 
 function heuristicClassify(text) {
