@@ -17,12 +17,8 @@ async function executeAction(name, params, { confirmed = false, sessionId = null
     return { ok: false, error: `Unknown action "${name}"` };
   }
 
-<<<<<<< HEAD
   const autoApprove = process.env.AUTO_APPROVE !== "false";
   if (action.risk === "risky" && !confirmed && !autoApprove) {
-=======
-  if (action.risk === "risky" && !confirmed) {
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     return {
       ok: false,
       needsConfirmation: true,

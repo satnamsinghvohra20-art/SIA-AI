@@ -7,11 +7,7 @@ const SESSIONS_DIR = path.join(DATA_DIR, "sessions");
 const ROOT_BRAIN_MD_PATH = path.join(__dirname, "..", "..", "brain.md");
 
 const RECENT_MESSAGE_LIMIT = 20; // keep this many raw messages before folding into summary
-<<<<<<< HEAD
 const SUMMARY_MODEL = "openai/gpt-4o-mini"; // cheap/fast — this is an internal bookkeeping call, not a user-facing answer
-=======
-const SUMMARY_MODEL = "google/gemini-2.5-flash"; // cheap/fast — this is an internal bookkeeping call, not a user-facing answer
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 const DEFAULT_SESSION = "cli"; // used by loop.js when run standalone outside any HTTP session
 
 // Guards against a malicious/bad sessionId (e.g. from a forged cookie) being

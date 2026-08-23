@@ -1,10 +1,7 @@
 const { classify } = require("./classifier");
 const { MODEL_REGISTRY } = require("./modelRegistry");
 const { callOpenRouter } = require("./openrouterClient");
-<<<<<<< HEAD
 const siaIdentity = require("./siaIdentity");
-=======
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 
 /**
  * ROUTER
@@ -12,7 +9,6 @@ const siaIdentity = require("./siaIdentity");
  * The main orchestration function:
  *   1. classify the incoming task
  *   2. look up the best model for that category
-<<<<<<< HEAD
  *   3. call it — WITH Sia's own capability system prompt prepended, so
  *      whichever model answers knows what Sia can actually do (see
  *      siaIdentity.js — this is what fixes "it says it doesn't know
@@ -64,48 +60,23 @@ async function route({ message, history = [], forceCategory = null, forceModel =
 
   const messages = [
     { role: "system", content: siaIdentity.systemPrompt() },
-=======
- *   3. call it
- *   4. return the answer + which model/category was used (for transparency)
- */
-async function route({ message, history = [], forceCategory = null }) {
-  const { category, method } = forceCategory
-    ? { category: forceCategory, method: "manual" }
-    : await classify(message);
-
-  const entry = MODEL_REGISTRY[category] || MODEL_REGISTRY.default;
-
-  const messages = [
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     ...history,
     { role: "user", content: message },
   ];
 
   const answer = await callOpenRouter({
-<<<<<<< HEAD
     model: targetModel,
-=======
-    model: entry.model,
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     messages,
   });
 
   return {
     answer,
     routing: {
-<<<<<<< HEAD
       category: categoryName,
       classifiedBy,
       model: targetModel,
       modelLabel,
       why,
-=======
-      category,
-      classifiedBy: method,
-      model: entry.model,
-      modelLabel: entry.label,
-      why: entry.why,
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     },
   };
 }

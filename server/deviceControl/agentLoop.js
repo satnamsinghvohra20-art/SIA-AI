@@ -4,7 +4,6 @@ const { executeAction } = require("./executor");
 const taskStore = require("./taskStore");
 const { MODEL_REGISTRY } = require("../modelRegistry");
 
-<<<<<<< HEAD
 const MAX_ITERATIONS = 10;
 
 const SYSTEM_PROMPT = `You are Sia, the user's advanced personal AI and device-control system (operating with the intelligence, speed, and efficiency of Tony Stark's J.A.R.V.I.S. protocol).
@@ -57,37 +56,6 @@ function buildToolCalls(message) {
     }
     return { id: call.id, name: call.function?.name, args, argsError };
   });
-=======
-const MAX_STEPS = 8;
-
-const SYSTEM_PROMPT = `You are Sia's device-control agent. You carry out ONE user
-instruction by calling the available tools, one tool call per turn, looping
-until the instruction is fully done — then reply with plain text (no tool
-call) summarizing what you did.
-
-Rules:
-- Call exactly one tool per turn. Look at the result before deciding the next step.
-- Some tools are risky (deleting files, sending messages, placing calls, power
-  actions, running scripts) and will pause for human approval — that's expected
-  and not an error; just wait for the result and continue from there.
-- If a tool call fails, read the error and either try a corrected call or explain
-  the problem in your final text reply — don't repeat the same failing call.
-- If the instruction is ambiguous or you're missing a required piece of
-  information (e.g. no phone number given for a message), say so in a plain
-  text reply instead of guessing.
-- Stop and reply in plain text once the instruction is actually complete.`;
-
-function buildToolCall(message) {
-  const call = message.tool_calls?.[0];
-  if (!call) return null;
-  let args = {};
-  try {
-    args = call.function?.arguments ? JSON.parse(call.function.arguments) : {};
-  } catch {
-    args = {};
-  }
-  return { id: call.id, name: call.function?.name, args };
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 }
 
 function snapshot(task) {
@@ -111,11 +79,7 @@ async function stepLoop(task, { onStep = null } = {}) {
   const tools = toToolDefinitions();
   let steps = 0;
 
-<<<<<<< HEAD
   while (task.status === "running" && steps < MAX_ITERATIONS) {
-=======
-  while (task.status === "running" && steps < MAX_STEPS) {
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     steps += 1;
 
     let message;
@@ -128,26 +92,18 @@ async function stepLoop(task, { onStep = null } = {}) {
       break;
     }
 
-<<<<<<< HEAD
     // Preserve the assistant's tool-call message BEFORE anything else — every
     // tool result appended below refers back to call ids that only exist
     // once this message is in the conversation.
-=======
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     task.messages.push({
       role: "assistant",
       content: message.content || null,
       tool_calls: message.tool_calls,
     });
 
-<<<<<<< HEAD
     const calls = buildToolCalls(message);
 
     if (calls.length === 0) {
-=======
-    const call = buildToolCall(message);
-    if (!call) {
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
       task.status = "done";
       task.finalAnswer = message.content || "Done.";
       const entry = { type: "final", content: task.finalAnswer };
@@ -156,7 +112,6 @@ async function stepLoop(task, { onStep = null } = {}) {
       break;
     }
 
-<<<<<<< HEAD
     // Execute every call in this turn — not just the first — and collect a
     // tool-result message for each one before moving on. A call needing
     // human confirmation is set aside (its result is filled in later by
@@ -246,49 +201,15 @@ async function stepLoop(task, { onStep = null } = {}) {
         params: active.call.args,
         note: active.result.note,
       };
-=======
-    const result = await executeAction(call.name, call.args, { confirmed: false, sessionId: task.sessionId });
-
-    if (result.needsConfirmation) {
-      task.status = "awaiting_confirmation";
-      task.pendingConfirmation = {
-        confirmationId: result.confirmationId,
-        toolCallId: call.id,
-        action: call.name,
-        params: call.args,
-      };
-      const entry = { type: "confirmation_needed", action: call.name, params: call.args, note: result.note };
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
       task.log.push(entry);
       if (onStep) onStep(entry);
       break;
     }
-<<<<<<< HEAD
   }
 
   if (task.status === "running" && steps >= MAX_ITERATIONS) {
     task.status = "done";
     task.finalAnswer = `Stopped after reaching the step limit for this task (${MAX_ITERATIONS} rounds). Ask again to continue.`;
-=======
-
-    task.messages.push({
-      role: "tool",
-      tool_call_id: call.id,
-      content: JSON.stringify(result),
-    });
-    const entry = { type: "action", action: call.name, params: call.args, result };
-    task.log.push(entry);
-    // Fires after every completed step, not just at the end — this is what
-    // lets the voice loop narrate progress ("opening WhatsApp... done, now
-    // typing the message...") instead of going silent until the whole
-    // multi-step task finishes.
-    if (onStep) onStep(entry);
-  }
-
-  if (task.status === "running" && steps >= MAX_STEPS) {
-    task.status = "done";
-    task.finalAnswer = "Stopped after reaching the step limit for this task (8 actions). Ask again to continue.";
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     task.log.push({ type: "final", content: task.finalAnswer });
   }
 
@@ -317,25 +238,16 @@ async function confirmPending({ sessionId, taskId, confirmationId, approved, onS
   const { toolCallId, action, params } = task.pendingConfirmation;
 
   if (approved) {
-<<<<<<< HEAD
     const result = await executeAction(action, params, { confirmed: true, sessionId: task.sessionId });
     task.messages.push({ role: "tool", tool_call_id: toolCallId, content: JSON.stringify(result) });
     task.log.push({ type: "action", action, params, result, confirmed: true });
     if (!result.ok) console.error(`[DeviceAgent] Tool execution failed for ${toolCallId}: ${result.error}`);
     console.log(`[DeviceAgent] Tool result returned for: ${toolCallId}`);
-=======
-    const result = await executeAction(action, params, { confirmed: true });
-    task.messages.push({ role: "tool", tool_call_id: toolCallId, content: JSON.stringify(result) });
-    task.log.push({ type: "action", action, params, result, confirmed: true });
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   } else {
     const denial = { ok: false, error: "User denied this action." };
     task.messages.push({ role: "tool", tool_call_id: toolCallId, content: JSON.stringify(denial) });
     task.log.push({ type: "action_denied", action, params });
-<<<<<<< HEAD
     console.log(`[DeviceAgent] Tool result returned for: ${toolCallId}`);
-=======
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   }
 
   task.pendingConfirmation = null;

@@ -25,7 +25,6 @@ async function playFile(filePath) {
   if (PLATFORM === "darwin") {
     await run("afplay", [filePath]);
   } else if (PLATFORM === "win32") {
-<<<<<<< HEAD
     const escapedPath = filePath.replace(/'/g, "''");
     const script = `
 Add-Type -AssemblyName presentationCore
@@ -48,13 +47,6 @@ $player.Close()`;
       const fallbackScript = `$wmp = New-Object -ComObject WMPlayer.OCX; $m = $wmp.newMedia('${escapedPath}'); $wmp.currentPlaylist.appendItem($m); $wmp.controls.play(); Start-Sleep -Seconds 3`;
       await run("powershell.exe", ["-NoProfile", "-Command", fallbackScript]).catch(() => {});
     });
-=======
-    await run("powershell.exe", [
-      "-NoProfile",
-      "-Command",
-      `(New-Object Media.SoundPlayer '${filePath}').PlaySync();`,
-    ]);
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   } else {
     // Linux: try a few common players, first one that exists wins
     for (const player of ["ffplay", "mpg123", "paplay", "aplay"]) {
@@ -70,7 +62,6 @@ $player.Close()`;
   }
 }
 
-<<<<<<< HEAD
 function speakWithWindowsSapi(text) {
   if (PLATFORM !== "win32") return Promise.resolve();
   const escaped = text.replace(/'/g, "''").replace(/\r?\n/g, " ");
@@ -117,36 +108,6 @@ async function speak(text) {
 
   // Fallback to native Windows SAPI Voice
   await speakWithWindowsSapi(text);
-=======
-async function speak(text) {
-  const apiKey = process.env.ELEVENLABS_API_KEY;
-  if (!apiKey || !text) return; // voice output is optional — fail silently, not fatal to the task
-
-  const voiceId = process.env.ELEVENLABS_VOICE_ID || "Xb7hH8MSUJpSbSDYk0k2";
-  try {
-    const res = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
-      {
-        method: "POST",
-        headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: text.slice(0, 1000),
-          model_id: "eleven_turbo_v2_5",
-          voice_settings: { stability: 0.5, similarity_boost: 0.75 },
-        }),
-      }
-    );
-    if (!res.ok) throw new Error(`TTS request failed: ${res.status}`);
-
-    const buf = Buffer.from(await res.arrayBuffer());
-    const tmpFile = path.join(os.tmpdir(), `sia-tts-${Date.now()}.mp3`);
-    await fs.writeFile(tmpFile, buf);
-    await playFile(tmpFile);
-    await fs.unlink(tmpFile).catch(() => {});
-  } catch (err) {
-    console.error("[voice] speak() failed:", err.message);
-  }
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 }
 
 module.exports = { speak };

@@ -16,8 +16,7 @@ _(no active plan)_
 _(none yet)_
 
 ## snapshot: chat_summary
-<<<<<<< HEAD
-Sia is using WhatsApp Web on Microsoft Edge to communicate with her contact "Anuj College." She has sent messages like "I will call you soon" and "Hey bro," but is experiencing visibility issues, stating, "I cannot view messages" and "I can't see any message." Layout shifts complicate chat selection, and she has an unresolved issue with typing in Hebrew, as she can only send messages. Sia is searching for contacts with phone numbers ending in "66" and "6655" for reliable messaging. She seeks clarification on which specific college "Anuj College" refers to and has requested assistance in drafting a message to inquire about it. After refreshing WhatsApp Web, Sia was prompted to check her latest messages. Open threads include confirming the visibility of resent messages, addressing the Hebrew typing issue, obtaining necessary contact information, clarifying the college associated with "Anuj College," and ensuring reliable messaging.
+Sia is using WhatsApp Web on Microsoft Edge to communicate with her contact "Anuj College." She has sent messages like "I will call you soon" and "Hey bro, what's up?" but is experiencing visibility issues, stating, "I cannot view messages," which complicates chat selection. After refreshing WhatsApp Web, she was prompted to check her latest messages but still cannot see any. Sia also has an unresolved issue with typing in Hebrew, as she can only send messages. She is searching for contacts with phone numbers ending in "66" and "6655" for reliable messaging and recently received a number, "77109166." Sia has drafted a message to clarify which specific college "Anuj College" refers to and is preparing to send it. Anuj has offered to let Sia open his WhatsApp for assistance. She is now ready to send a message to the contact with the number ending in "66," having just sent "Hey bro, what's up?" Additionally, Sia has asked for clarification on what Anuj would like to open. Open threads include confirming the visibility of resent messages, addressing the Hebrew typing issue, obtaining necessary contact information, clarifying the college associated with "Anuj College," and ensuring reliable messaging.
 
 ## snapshot: blockers (last 10)
 - 2026-08-23T09:14:43.135Z — /api/chat failed: All candidate AI models failed. Last error: Model anthropic/claude-3.5-haiku returned 404: {"error":{"message":"No endpoints found for anthropic/claude-3.5-haiku.","code":404},"user_id":"user_3IHmLA8alz2aKZltYat9YuKDv9X"}
@@ -32,18 +31,4 @@ Sia is using WhatsApp Web on Microsoft Edge to communicate with her contact "Anu
 - 2026-08-23T12:33:07.024Z — /api/chat failed: All candidate AI models failed. Last error: Model anthropic/claude-3.5-haiku returned 404: {"error":{"message":"No endpoints found for anthropic/claude-3.5-haiku.","code":404},"user_id":"user_3IHmLA8alz2aKZltYat9YuKDv9X"}
 
 ## snapshot: last_updated
-2026-08-23T14:30:37.234Z
-=======
-_(nothing summarized yet — still within recent_messages window)_
-
-## snapshot: blockers (last 10)
-- 2026-08-18T04:27:49.360Z — /api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example).
-- 2026-08-18T04:27:54.752Z — /api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example).
-- 2026-08-18T04:28:04.194Z — /api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example).
-- 2026-08-18T04:28:05.781Z — /api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example).
-- 2026-08-18T04:28:27.043Z — /api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example).
-- 2026-08-18T04:28:27.993Z — /api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example).
-
-## snapshot: last_updated
-2026-08-18T04:28:28.012Z
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
+2026-08-23T15:26:16.803Z

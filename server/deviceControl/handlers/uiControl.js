@@ -68,7 +68,6 @@ async function typeText({ text }) {
   if (typeof text !== "string" || !text.length) throw new Error("text is required");
 
   if (PLATFORM === "win32") {
-<<<<<<< HEAD
     const b64 = Buffer.from(text, "utf8").toString("base64");
     const script = `
 Add-Type -AssemblyName System.Windows.Forms
@@ -85,15 +84,6 @@ Start-Sleep -Milliseconds 150
     await run("osascript", ["-e", script]).catch(async () => {
       await run("osascript", ["-e", `tell application "System Events" to keystroke "${escaped}"`]);
     });
-=======
-    // SendKeys special-chars need escaping
-    const escaped = text.replace(/([+^%~(){}[\]])/g, "{$1}");
-    const script = `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait("${escaped.replace(/"/g, '`"')}")`;
-    await run("powershell.exe", ["-NoProfile", "-Command", script]);
-  } else if (PLATFORM === "darwin") {
-    const escaped = text.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-    await run("osascript", ["-e", `tell application "System Events" to keystroke "${escaped}"`]);
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   } else {
     await run("xdotool", ["type", "--clearmodifiers", "--", text]);
   }

@@ -3,11 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<<<<<<< HEAD
   <title>Sia · Personal AI Assistant</title>
-=======
-  <title>Sia · Multi-Model Orchestrator</title>
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -19,26 +15,17 @@
           <h1>Sia</h1>
         </div>
         <div class="header-actions">
-<<<<<<< HEAD
           <button id="models-catalog-btn" class="live-voice-btn models-btn" type="button" title="Browse 300+ AI Agents & Models">
             <span class="live-orb-mini model-orb-glow"></span>
             <span id="models-btn-label">🌐 300+ AI Models</span>
           </button>
-=======
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
           <button id="device-control-btn" class="live-voice-btn" type="button" title="Open Device Control">
             <span class="live-orb-mini"></span>
             <span>Device Control</span>
           </button>
-<<<<<<< HEAD
           <button id="live-voice-btn" class="live-voice-btn jarvis-hud-btn" type="button" title="Start Hands-Free Sia Live Voice">
             <span class="live-orb-mini jarvis-orb-glow"></span>
             <span>⚡ Sia Live</span>
-=======
-          <button id="live-voice-btn" class="live-voice-btn" type="button" title="Start Live Voice Conversation">
-            <span class="live-orb-mini"></span>
-            <span>Live Voice</span>
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
           </button>
           <button id="voice-toggle-btn" class="voice-toggle-btn" type="button" title="Auto-speak AI responses (Voice Mode)">
             <svg class="voice-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -50,16 +37,11 @@
           </button>
         </div>
       </div>
-<<<<<<< HEAD
       <p class="tagline">300+ AI Models & Hands-Free Voice Control · At your service, sir.</p>
-=======
-      <p class="tagline">One prompt. The best model for the job, every time.</p>
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     </header>
 
     <main class="chat-window" id="chat-window">
       <div class="empty-state" id="empty-state">
-<<<<<<< HEAD
         <p>Sia is online and ready for instructions, sir.</p>
         <p class="empty-sub">Say "Sia" or type — access 300+ AI models, Microsoft Edge browsing, coding, reasoning, research, and systems.</p>
       </div>
@@ -107,13 +89,6 @@
       </div>
     </div>
 
-=======
-        <p>Ask anything — code, research, writing, math, images, whatever.</p>
-        <p class="empty-sub">Sia reads your task and hands it to the model best suited for it.</p>
-      </div>
-    </main>
-
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     <!-- Live Voice Fullscreen Experience -->
     <div class="live-voice-overlay" id="live-voice-overlay" hidden>
       <div class="live-ambient-glow"></div>
@@ -121,11 +96,7 @@
       <div class="live-header">
         <div class="live-status-pill">
           <span class="live-status-dot"></span>
-<<<<<<< HEAD
           <span id="live-status-text">Sia Online · At your service, sir</span>
-=======
-          <span id="live-status-text">Sia Live · Ready</span>
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
         </div>
         <div id="live-model-badge" class="live-model-badge" hidden>
           <span class="dot"></span>
@@ -133,30 +104,18 @@
         </div>
         <div class="live-header-right">
           <select id="live-agent-select" class="voice-engine-select" title="Target Agent Model">
-<<<<<<< HEAD
             <option value="">🤖 Auto-Route (All 26+ Protocols)</option>
-=======
-            <option value="">🤖 Auto-Route (All Agents)</option>
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
           </select>
           <select id="voice-engine-select" class="voice-engine-select" title="Voice Model Engine">
             <option value="browser">🌐 Browser Voice (Free)</option>
             <option value="elevenlabs">🎙️ ElevenLabs AI</option>
           </select>
           <select id="neural-voice-select" class="voice-engine-select" title="Select Voice" hidden>
-<<<<<<< HEAD
             <option value="Xb7hH8MSUJpSbSDYk0k2">Alice (British, Sia Tone)</option>
             <option value="JBFqnCBsd6RMkjVDRZzb">George (Storyteller)</option>
             <option value="onwK4e9ZLuTAKqWW03F9">Daniel (Deep, Authoritative)</option>
             <option value="EXAVITQu4vr4xnSDxMaL">Sarah (Natural)</option>
             <option value="IKne3meq5aSn9XLyUdCD">Charlie (Casual)</option>
-=======
-            <option value="Xb7hH8MSUJpSbSDYk0k2">Alice (British)</option>
-            <option value="JBFqnCBsd6RMkjVDRZzb">George (Storyteller)</option>
-            <option value="EXAVITQu4vr4xnSDxMaL">Sarah (Natural)</option>
-            <option value="IKne3meq5aSn9XLyUdCD">Charlie (Casual)</option>
-            <option value="onwK4e9ZLuTAKqWW03F9">Daniel (Deep)</option>
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
             <option value="XB0fDUnXU5powFXDhCwa">Charlotte (Calm)</option>
             <option value="TX3LPaxmHKxFdv7VOQHJ">Liam (Energetic)</option>
           </select>
@@ -171,26 +130,17 @@
       </div>
 
       <div class="live-center" id="live-center-stage">
-<<<<<<< HEAD
         <div class="live-orb-container jarvis-arc-container" id="live-orb">
           <div class="orb-aura" id="orb-aura"></div>
           <div class="arc-reactor-ring ring-outer"></div>
           <div class="arc-reactor-ring ring-mid"></div>
           <div class="arc-reactor-ring ring-inner"></div>
-=======
-        <div class="live-orb-container" id="live-orb">
-          <div class="orb-aura" id="orb-aura"></div>
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
           <div class="orb-core" id="orb-core">
             <div class="orb-inner-wave"></div>
             <div class="orb-inner-wave wave-2"></div>
             <div class="orb-inner-wave wave-3"></div>
             <div class="orb-audio-bars" id="orb-audio-bars">
-<<<<<<< HEAD
               <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-=======
-              <span></span><span></span><span></span><span></span><span></span>
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
             </div>
           </div>
           <div class="orb-ripple"></div>
@@ -199,11 +149,7 @@
 
         <div class="live-subtitles" id="live-subtitles">
           <p class="live-user-caption" id="live-user-caption"></p>
-<<<<<<< HEAD
           <p class="live-assistant-caption" id="live-assistant-caption">Sia voice protocol active. Say "Sia" or speak freely, sir...</p>
-=======
-          <p class="live-assistant-caption" id="live-assistant-caption">Direct voice conversation active. Speak freely...</p>
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
         </div>
       </div>
 
@@ -240,7 +186,6 @@
             </svg>
           </button>
         </div>
-<<<<<<< HEAD
         <p class="device-sub">Tell Sia what to do on this device. Voice and device commands execute automatically using Microsoft Edge and Windows apps.</p>
 
         <form id="device-form" class="device-form">
@@ -254,12 +199,6 @@
             </svg>
             <span class="device-mic-pulse"></span>
           </button>
-=======
-        <p class="device-sub">Tell Sia what to do on this device. Risky steps (deleting, sending messages, calls, power) always pause for your approval first.</p>
-
-        <form id="device-form" class="device-form">
-          <input id="device-instruction" type="text" placeholder="e.g. open chrome, then take a screenshot" autocomplete="off" />
->>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
           <button type="submit" id="device-run-btn">Run</button>
         </form>
 
