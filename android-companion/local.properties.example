@@ -1,0 +1,4 @@
+# Copy to local.properties and point at your Android SDK install.
+# Android Studio does this automatically on first open — you usually
+# don't need to touch this file.
+sdk.dir=/path/to/Android/sdk

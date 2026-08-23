@@ -1,0 +1,23 @@
+services:
+  sia:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sia-ai:latest
+    container_name: sia-ai-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      - ELEVENLABS_VOICE_ID=${ELEVENLABS_VOICE_ID}
+      - SIA_PASSWORD=${SIA_PASSWORD}
+      - ANDROID_PAIR_TOKEN=${ANDROID_PAIR_TOKEN}
+    env_file:
+      - .env
+    volumes:
+      - ./data/memory:/app/data/memory
+      - ./data/device:/app/data/device

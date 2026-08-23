@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sia · Personal AI Assistant</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div class="header-top">
+        <div class="brand">
+          <span class="brand-dot"></span>
+          <h1>Sia</h1>
+        </div>
+        <div class="header-actions">
+          <button id="models-catalog-btn" class="live-voice-btn models-btn" type="button" title="Browse 300+ AI Agents & Models">
+            <span class="live-orb-mini model-orb-glow"></span>
+            <span id="models-btn-label">🌐 300+ AI Models</span>
+          </button>
+          <button id="device-control-btn" class="live-voice-btn" type="button" title="Open Device Control">
+            <span class="live-orb-mini"></span>
+            <span>Device Control</span>
+          </button>
+          <button id="live-voice-btn" class="live-voice-btn jarvis-hud-btn" type="button" title="Start Hands-Free Sia Live Voice">
+            <span class="live-orb-mini jarvis-orb-glow"></span>
+            <span>⚡ Sia Live</span>
+          </button>
+          <button id="voice-toggle-btn" class="voice-toggle-btn" type="button" title="Auto-speak AI responses (Voice Mode)">
+            <svg class="voice-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path class="wave-1" d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path class="wave-2" d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+            <span class="voice-toggle-label">Voice Output</span>
+          </button>
+        </div>
+      </div>
+      <p class="tagline">300+ AI Models & Hands-Free Voice Control · At your service, sir.</p>
+    </header>
+
+    <main class="chat-window" id="chat-window">
+      <div class="empty-state" id="empty-state">
+        <p>Sia is online and ready for instructions, sir.</p>
+        <p class="empty-sub">Say "Sia" or type — access 300+ AI models, Microsoft Edge browsing, coding, reasoning, research, and systems.</p>
+      </div>
+    </main>
+
+    <!-- 300+ AI Models Catalog Modal -->
+    <div class="models-overlay" id="models-overlay" hidden>
+      <div class="models-modal">
+        <div class="models-modal-header">
+          <div class="models-modal-title">
+            <h2>⚡ 300+ AI Models & Agents</h2>
+            <span class="models-count-badge" id="models-count-badge">Loading models...</span>
+          </div>
+          <button id="models-close-btn" class="live-icon-btn" type="button" title="Close">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="models-search-bar">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input id="models-search-input" type="text" placeholder="Search 300+ models by name, provider (Claude, OpenAI, Gemini, DeepSeek, Llama...), or task..." autocomplete="off" />
+          <button id="models-clear-btn" type="button" class="models-clear-btn" hidden>&times;</button>
+        </div>
+
+        <div class="models-filter-tabs" id="models-filter-tabs">
+          <button class="filter-tab active" data-category="all">All Models</button>
+          <button class="filter-tab" data-category="featured">⭐ Featured</button>
+          <button class="filter-tab" data-category="coding">💻 Coding</button>
+          <button class="filter-tab" data-category="reasoning">🧠 Reasoning</button>
+          <button class="filter-tab" data-category="vision">👁️ Vision</button>
+          <button class="filter-tab" data-category="fast">⚡ Ultra-Fast</button>
+          <button class="filter-tab" data-category="open_source">🌐 Open Source</button>
+          <button class="filter-tab" data-category="research">🔍 Search & Citations</button>
+          <button class="filter-tab" data-category="creative">🎨 Creative</button>
+          <button class="filter-tab" data-category="enterprise">🏢 Enterprise</button>
+        </div>
+
+        <div class="models-grid" id="models-grid"></div>
+      </div>
+    </div>
+
+    <!-- Live Voice Fullscreen Experience -->
+    <div class="live-voice-overlay" id="live-voice-overlay" hidden>
+      <div class="live-ambient-glow"></div>
+      
+      <div class="live-header">
+        <div class="live-status-pill">
+          <span class="live-status-dot"></span>
+          <span id="live-status-text">Sia Online · At your service, sir</span>
+        </div>
+        <div id="live-model-badge" class="live-model-badge" hidden>
+          <span class="dot"></span>
+          <span id="live-model-name">Orchestrating...</span>
+        </div>
+        <div class="live-header-right">
+          <select id="live-agent-select" class="voice-engine-select" title="Target Agent Model">
+            <option value="">🤖 Auto-Route (All 26+ Protocols)</option>
+          </select>
+          <select id="voice-engine-select" class="voice-engine-select" title="Voice Model Engine">
+            <option value="browser">🌐 Browser Voice (Free)</option>
+            <option value="elevenlabs">🎙️ ElevenLabs AI</option>
+          </select>
+          <select id="neural-voice-select" class="voice-engine-select" title="Select Voice" hidden>
+            <option value="Xb7hH8MSUJpSbSDYk0k2">Alice (British, Sia Tone)</option>
+            <option value="JBFqnCBsd6RMkjVDRZzb">George (Storyteller)</option>
+            <option value="onwK4e9ZLuTAKqWW03F9">Daniel (Deep, Authoritative)</option>
+            <option value="EXAVITQu4vr4xnSDxMaL">Sarah (Natural)</option>
+            <option value="IKne3meq5aSn9XLyUdCD">Charlie (Casual)</option>
+            <option value="XB0fDUnXU5powFXDhCwa">Charlotte (Calm)</option>
+            <option value="TX3LPaxmHKxFdv7VOQHJ">Liam (Energetic)</option>
+          </select>
+          <button id="live-speed-btn" class="live-speed-btn" type="button" title="Change voice speed">1.0x</button>
+          <button id="live-close-btn" class="live-icon-btn" title="Exit Live Mode">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="live-center" id="live-center-stage">
+        <div class="live-orb-container jarvis-arc-container" id="live-orb">
+          <div class="orb-aura" id="orb-aura"></div>
+          <div class="arc-reactor-ring ring-outer"></div>
+          <div class="arc-reactor-ring ring-mid"></div>
+          <div class="arc-reactor-ring ring-inner"></div>
+          <div class="orb-core" id="orb-core">
+            <div class="orb-inner-wave"></div>
+            <div class="orb-inner-wave wave-2"></div>
+            <div class="orb-inner-wave wave-3"></div>
+            <div class="orb-audio-bars" id="orb-audio-bars">
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+          <div class="orb-ripple"></div>
+          <div class="orb-ripple ripple-2"></div>
+        </div>
+
+        <div class="live-subtitles" id="live-subtitles">
+          <p class="live-user-caption" id="live-user-caption"></p>
+          <p class="live-assistant-caption" id="live-assistant-caption">Sia voice protocol active. Say "Sia" or speak freely, sir...</p>
+        </div>
+      </div>
+
+      <div class="live-footer">
+        <button id="live-mute-btn" class="live-action-btn" type="button" title="Mute/Unmute Mic">
+          <svg class="mic-icon-svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+          <span id="live-mute-label">Mute</span>
+        </button>
+
+        <button id="live-end-btn" class="live-action-btn end-btn" type="button" title="End Live Voice">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"></path>
+            <line x1="23" y1="1" x2="1" y2="23"></line>
+          </svg>
+          <span>End</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Device Control Panel -->
+    <div class="device-overlay" id="device-overlay" hidden>
+      <div class="device-panel">
+        <div class="device-panel-header">
+          <h2>Device Control</h2>
+          <button id="device-close-btn" class="live-icon-btn" type="button" title="Close">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <p class="device-sub">Tell Sia what to do on this device. Voice and device commands execute automatically using Microsoft Edge and Windows apps.</p>
+
+        <form id="device-form" class="device-form">
+          <input id="device-instruction" type="text" placeholder="e.g. open youtube in edge, search for music, or open whatsapp" autocomplete="off" />
+          <button type="button" id="device-mic-btn" class="device-mic-btn" title="Speak your instruction">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+            <span class="device-mic-pulse"></span>
+          </button>
+          <button type="submit" id="device-run-btn">Run</button>
+        </form>
+
+        <div id="device-log" class="device-log"></div>
+
+        <div id="device-confirm-card" class="device-confirm-card" hidden>
+          <p id="device-confirm-text"></p>
+          <div class="device-confirm-actions">
+            <button id="device-approve-btn" type="button" class="device-approve-btn">Approve</button>
+            <button id="device-deny-btn" type="button" class="device-deny-btn">Deny</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="login-overlay" id="login-overlay" hidden>
+      <form class="login-box" id="login-form">
+        <h2>Sia is locked</h2>
+        <p>Enter the access password to continue.</p>
+        <input id="login-password" type="password" placeholder="Password" autocomplete="current-password" />
+        <button type="submit">Unlock</button>
+        <p class="login-error" id="login-error" hidden></p>
+      </form>
+    </div>
+
+    <form class="composer" id="composer">
+      <select id="override-select" title="Force a specific model category">
+        <option value="">Auto-route</option>
+      </select>
+      <div class="input-wrapper">
+        <input
+          id="message-input"
+          type="text"
+          placeholder="Type or speak your task..."
+          autocomplete="off"
+        />
+        <button type="button" id="mic-btn" class="mic-btn" title="Speak to Sia (Voice recognition)">
+          <svg class="mic-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+          <span class="mic-pulse"></span>
+        </button>
+      </div>
+      <button type="submit" id="send-btn">Send</button>
+    </form>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

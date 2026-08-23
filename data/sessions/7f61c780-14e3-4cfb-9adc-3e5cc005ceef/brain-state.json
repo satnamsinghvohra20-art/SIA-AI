@@ -1,0 +1,160 @@
+{
+  "current_task": {
+    "id": null,
+    "goal": null,
+    "status": "idle",
+    "started_at": null
+  },
+  "plan": [],
+  "decisions_log": [],
+  "chat_summary": "Sia is using WhatsApp Web on Microsoft Edge to communicate with her contact \"Anuj College.\" She has sent messages like \"I will call you soon\" and \"Hey bro,\" but is experiencing visibility issues, stating, \"I cannot view messages\" and \"I can't see any message.\" Layout shifts complicate chat selection, and she has an unresolved issue with typing in Hebrew, as she can only send messages. Sia is searching for contacts with phone numbers ending in \"66\" and \"6655\" for reliable messaging. She seeks clarification on which specific college \"Anuj College\" refers to and has requested assistance in drafting a message to inquire about it. After refreshing WhatsApp Web, Sia was prompted to check her latest messages. Open threads include confirming the visibility of resent messages, addressing the Hebrew typing issue, obtaining necessary contact information, clarifying the college associated with \"Anuj College,\" and ensuring reliable messaging.",
+  "recent_messages": [
+    {
+      "role": "user",
+      "content": "Uh, yes, please check that.",
+      "at": "2026-08-23T14:06:27.546Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Reading recent WhatsApp messages now, sir.",
+      "at": "2026-08-23T14:06:30.632Z"
+    },
+    {
+      "role": "user",
+      "content": "If you want you can open my WhatsApp.",
+      "at": "2026-08-23T14:06:48.742Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Opening WhatsApp Web in Microsoft Edge, sir.",
+      "at": "2026-08-23T14:06:52.404Z"
+    },
+    {
+      "role": "user",
+      "content": ".",
+      "at": "2026-08-23T14:28:04.019Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Please let me know how else I can assist you, sir.",
+      "at": "2026-08-23T14:28:07.719Z"
+    },
+    {
+      "role": "user",
+      "content": "Send WhatsApp message to Anuj college. Hey bro.",
+      "at": "2026-08-23T14:28:37.916Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Drafted message for Anuj college on WhatsApp Web, sir.",
+      "at": "2026-08-23T14:28:40.088Z"
+    },
+    {
+      "role": "user",
+      "content": "I can't see any message that has been.",
+      "at": "2026-08-23T14:28:59.823Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Sending \"Hey bro\" to Anuj College now, sir.",
+      "at": "2026-08-23T14:29:02.702Z"
+    },
+    {
+      "role": "user",
+      "content": "send message to",
+      "at": "2026-08-23T14:29:19.780Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Please provide the recipient's name and the message you'd like to send.",
+      "at": "2026-08-23T14:29:23.380Z"
+    },
+    {
+      "role": "user",
+      "content": "Send message to Anuj College.",
+      "at": "2026-08-23T14:29:35.120Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Drafted message for Anuj College on WhatsApp Web, sir.",
+      "at": "2026-08-23T14:29:37.621Z"
+    },
+    {
+      "role": "user",
+      "content": "you have to send",
+      "at": "2026-08-23T14:29:41.106Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Sending the message to Anuj College now, sir.",
+      "at": "2026-08-23T14:29:43.842Z"
+    },
+    {
+      "role": "user",
+      "content": "Type the message now.",
+      "at": "2026-08-23T14:30:20.487Z"
+    },
+    {
+      "role": "assistant",
+      "content": "It seems there was an issue typing the message. Please specify the message you'd like me to type.",
+      "at": "2026-08-23T14:30:23.606Z"
+    },
+    {
+      "role": "user",
+      "content": "type the message now",
+      "at": "2026-08-23T14:30:31.061Z"
+    },
+    {
+      "role": "assistant",
+      "content": "I captured a screenshot to determine the next action. What would you like to do next?",
+      "at": "2026-08-23T14:30:34.105Z"
+    }
+  ],
+  "blockers": [
+    {
+      "at": "2026-08-23T09:14:06.017Z",
+      "issue": "/api/chat failed: All candidate AI models failed. Last error: Model anthropic/claude-3.5-haiku returned 404: {\"error\":{\"message\":\"No endpoints found for anthropic/claude-3.5-haiku.\",\"code\":404},\"user_id\":\"user_3IHmLA8alz2aKZltYat9YuKDv9X\"}"
+    },
+    {
+      "at": "2026-08-23T09:14:43.135Z",
+      "issue": "/api/chat failed: All candidate AI models failed. Last error: Model anthropic/claude-3.5-haiku returned 404: {\"error\":{\"message\":\"No endpoints found for anthropic/claude-3.5-haiku.\",\"code\":404},\"user_id\":\"user_3IHmLA8alz2aKZltYat9YuKDv9X\"}"
+    },
+    {
+      "at": "2026-08-23T09:14:43.199Z",
+      "issue": "/api/chat failed: All candidate AI models failed. Last error: Model anthropic/claude-3.5-haiku returned 404: {\"error\":{\"message\":\"No endpoints found for anthropic/claude-3.5-haiku.\",\"code\":404},\"user_id\":\"user_3IHmLA8alz2aKZltYat9YuKDv9X\"}"
+    },
+    {
+      "at": "2026-08-23T09:15:15.448Z",
+      "issue": "/api/chat failed: All candidate AI models failed. Last error: Model anthropic/claude-3.5-haiku returned 404: {\"error\":{\"message\":\"No endpoints found for anthropic/claude-3.5-haiku.\",\"code\":404},\"user_id\":\"user_3IHmLA8alz2aKZltYat9YuKDv9X\"}"
+    },
+    {
+      "at": "2026-08-23T09:15:16.111Z",
+      "issue": "/api/chat failed: All candidate AI models failed. Last error: Model anthropic/claude-3.5-haiku returned 404: {\"error\":{\"message\":\"No endpoints found for anthropic/claude-3.5-haiku.\",\"code\":404},\"user_id\":\"user_3IHmLA8alz2aKZltYat9YuKDv9X\"}"
+    },
+    {
+      "at": "2026-08-23T09:15:22.432Z",
+      "issue": "/api/chat failed: All candidate AI models failed. Last error: Model anthropic/claude-3.5-haiku returned 404: {\"error\":{\"message\":\"No endpoints found for anthropic/claude-3.5-haiku.\",\"code\":404},\"user_id\":\"user_3IHmLA8alz2aKZltYat9YuKDv9X\"}"
+    },
+    {
+      "at": "2026-08-23T09:15:23.279Z",
+      "issue": "/api/chat failed: All candidate AI models failed. Last error: Model anthropic/claude-3.5-haiku returned 404: {\"error\":{\"message\":\"No endpoints found for anthropic/claude-3.5-haiku.\",\"code\":404},\"user_id\":\"user_3IHmLA8alz2aKZltYat9YuKDv9X\"}"
+    },
+    {
+      "at": "2026-08-23T12:32:54.702Z",
+      "issue": "/api/chat failed: All candidate AI models failed. Last error: Model anthropic/claude-3.5-haiku returned 404: {\"error\":{\"message\":\"No endpoints found for anthropic/claude-3.5-haiku.\",\"code\":404},\"user_id\":\"user_3IHmLA8alz2aKZltYat9YuKDv9X\"}"
+    },
+    {
+      "at": "2026-08-23T12:32:55.278Z",
+      "issue": "/api/chat failed: All candidate AI models failed. Last error: Model anthropic/claude-3.5-haiku returned 404: {\"error\":{\"message\":\"No endpoints found for anthropic/claude-3.5-haiku.\",\"code\":404},\"user_id\":\"user_3IHmLA8alz2aKZltYat9YuKDv9X\"}"
+    },
+    {
+      "at": "2026-08-23T12:33:05.647Z",
+      "issue": "/api/chat failed: All candidate AI models failed. Last error: Model anthropic/claude-3.5-haiku returned 404: {\"error\":{\"message\":\"No endpoints found for anthropic/claude-3.5-haiku.\",\"code\":404},\"user_id\":\"user_3IHmLA8alz2aKZltYat9YuKDv9X\"}"
+    },
+    {
+      "at": "2026-08-23T12:33:07.024Z",
+      "issue": "/api/chat failed: All candidate AI models failed. Last error: Model anthropic/claude-3.5-haiku returned 404: {\"error\":{\"message\":\"No endpoints found for anthropic/claude-3.5-haiku.\",\"code\":404},\"user_id\":\"user_3IHmLA8alz2aKZltYat9YuKDv9X\"}"
+    }
+  ],
+  "last_updated": "2026-08-23T14:30:37.234Z"
+}

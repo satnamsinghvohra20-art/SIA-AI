@@ -1,0 +1,27 @@
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Git & IDE
+.git
+.gitignore
+.gemini
+.agents
+.vscode
+.idea
+
+# Environment & local secrets (pass via docker-compose or -e)
+.env
+.env.local
+.env.*.local
+
+# Temporary & test files
+test*.js
+scratch
+tmp
+data/device/screenshots/*
+*.png
+*.jpg
+*.log
