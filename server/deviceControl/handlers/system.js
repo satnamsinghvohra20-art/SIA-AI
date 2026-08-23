@@ -55,7 +55,6 @@ const APP_MAP = {
     photos: "ms-photos:",
     mail: "outlookmail:",
     store: "ms-windows-store:",
-    whatsapp: "WhatsApp",
   },
   darwin: {
     browser: "Microsoft Edge",
