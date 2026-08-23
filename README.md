@@ -160,10 +160,17 @@ done — up to 8 steps per request.
 - There's no "run this arbitrary command" action. `run_script` can only
   invoke scripts that already exist in `server/deviceControl/scripts/` —
   add your own `.sh`/`.py`/`.js` files there to extend what it can do.
+<<<<<<< HEAD
 - WhatsApp, Instagram, and calling drive your real paired phone directly
   (the same Accessibility Service the voice-control layer below uses) —
   free, no API keys, no per-message cost. See "Voice control" below for
   how the phone/PC control layer works.
+=======
+- WhatsApp, Instagram, and calling use official APIs (Twilio, Meta Graph
+  API) rather than unofficial personal-account automation, so they need
+  their own credentials in `.env` (see `.env.example`) and won't do
+  anything until configured.
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 - Device-control tasks are tied to your signed session cookie the same way
   chat history is — another session can't see or approve your pending
   actions.
@@ -174,12 +181,21 @@ JSON-schema params, and `risk` level) in `actionRegistry.js`.
 
 ## Voice control — one command, does the task, talks back
 
+<<<<<<< HEAD
 This is the "control everything by voice" layer, and it's what the
 WhatsApp/Instagram/call actions above are built on — there's no per-app
 API or token anywhere in this project. It drives the **operating system
 directly**, on whichever device it's running on, the same way a person
 would with a mouse/keyboard/finger. That's what makes it work in apps
 that don't have a public API at all.
+=======
+This is the "control everything by voice" layer. It doesn't route through
+per-app APIs (that's what the WhatsApp/Instagram/call actions above do,
+and why they need Twilio/Meta credentials) — instead it drives the
+**operating system directly**, on whichever device it's running on, the
+same way a person would with a mouse/keyboard/finger. That's what makes
+it work in apps that don't have a public API at all.
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 
 | Device | How it's controlled | Setup |
 |---|---|---|
@@ -218,6 +234,7 @@ text out) works standalone right now — that's what both the iOS Shortcut
 and the Android app's own on-device speech recognition can hit directly,
 without the Picovoice/Groq setup above.
 "# SIA-AI" 
+<<<<<<< HEAD
 
 ## Recent changes (device control + voice)
 
@@ -245,3 +262,5 @@ without the Picovoice/Groq setup above.
   (or ElevenLabs if you've configured it), and the agent's final replies
   are now instructed to stay short and conversational since they're read
   aloud.
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16

@@ -1,6 +1,7 @@
 const { callOpenRouter } = require("./openrouterClient");
 
 /**
+<<<<<<< HEAD
  * CLASSIFIER (Instant 0ms Heuristic + Ultra-Fast LLM Fallback)
  * -------------------------------------------------------------
  * Decides which specialized AI model best suits the user's task.
@@ -202,6 +203,66 @@ function heuristicClassify(text) {
     }
   }
 
+=======
+ * CLASSIFIER
+ * ----------
+ * Decides which task category a user's message belongs to.
+ *
+ * Two modes:
+ *  1. Heuristic (instant, free, no API call) — keyword-based, runs first.
+ *  2. LLM fallback (only if heuristic is unsure) — uses a cheap/fast model
+ *     to classify ambiguous prompts.
+ */
+
+const CATEGORY_KEYWORDS = {
+  coding: [
+    "code", "function", "bug", "error", "debug", "python", "javascript",
+    "react", "api", "class ", "compile", "stack trace", "refactor",
+    "sql", "algorithm", "script", "repo", "git", "regex",
+  ],
+  reasoning: [
+    "prove", "solve", "logic", "puzzle", "step by step", "theorem",
+    "probability", "math", "equation", "calculate", "derive",
+  ],
+  creative: [
+    "story", "poem", "write a", "essay", "novel", "screenplay",
+    "creative", "song", "lyrics", "character", "plot",
+  ],
+  research: [
+    "latest", "news", "current", "today", "who is", "what happened",
+    "search", "find out", "recent", "price of", "stock",
+  ],
+  vision: [
+    "image", "photo", "picture", "screenshot", "diagram", "chart",
+    "看", "look at this", "attached image",
+  ],
+  long_context: [
+    "entire document", "whole book", "full codebase", "long pdf",
+    "summarize this document", "analyze this contract",
+  ],
+  data: [
+    "json", "csv", "spreadsheet", "table", "extract fields",
+    "structured data", "schema",
+  ],
+  fast_general: [
+    "hi", "hello", "hey", "thanks", "what's up", "quick question",
+  ],
+  // Not used to route /api/chat (device tasks go through the dedicated
+  // /api/device/command endpoint) — kept here so a plain chat message like
+  // "open chrome for me" gets classified sensibly if it ever reaches the
+  // normal chat path instead of the device panel.
+  device_control: [
+    "open app", "close app", "turn on", "turn off", "shut down", "shutdown",
+    "restart my", "set volume", "take a screenshot", "send a whatsapp",
+    "send whatsapp", "message on instagram", "call my", "place a call",
+    "run the script", "delete the file", "control my device", "control my pc",
+    "control my computer", "control my phone",
+  ],
+};
+
+function heuristicClassify(text) {
+  const lower = text.toLowerCase();
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   let bestCategory = null;
   let bestScore = 0;
 
@@ -213,7 +274,11 @@ function heuristicClassify(text) {
     }
   }
 
+<<<<<<< HEAD
   // Require at least one matching signal
+=======
+  // Require at least one real signal before trusting the heuristic
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   return bestScore > 0 ? bestCategory : null;
 }
 
@@ -222,6 +287,7 @@ async function llmClassify(text) {
     (c) => c !== "default"
   );
 
+<<<<<<< HEAD
   const systemPrompt = `You are an ultra-fast task classifier. Classify the user's prompt into exactly one of these categories: ${categories.join(
     ", "
   )}. Reply with ONLY the category name and nothing else.`;
@@ -229,12 +295,25 @@ async function llmClassify(text) {
   try {
     const result = await callOpenRouter({
       model: "openai/gpt-4o-mini",
+=======
+  const systemPrompt = `You are a task router. Classify the user's message into exactly one of these categories: ${categories.join(
+    ", "
+  )}. Reply with ONLY the category name, nothing else.`;
+
+  try {
+    const result = await callOpenRouter({
+      model: "google/gemini-2.5-flash", // cheap + fast for a one-word classification
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: text },
       ],
+<<<<<<< HEAD
       max_tokens: 15,
       temperature: 0.1,
+=======
+      max_tokens: 10,
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     });
     const guess = result.trim().toLowerCase().replace(/[^a-z_]/g, "");
     return categories.includes(guess) ? guess : "default";

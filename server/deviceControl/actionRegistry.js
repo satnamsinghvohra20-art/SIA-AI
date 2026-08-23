@@ -6,7 +6,10 @@ const instagram = require("./handlers/instagram");
 const calls = require("./handlers/calls");
 const ui = require("./handlers/uiControl");
 const mobile = require("./handlers/mobile");
+<<<<<<< HEAD
 const screenReader = require("./handlers/screenReader");
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 
 /**
  * ACTION REGISTRY
@@ -23,6 +26,7 @@ const screenReader = require("./handlers/screenReader");
  */
 const ACTIONS = {
   open_app: {
+<<<<<<< HEAD
     description:
       "Open an application or web service on this machine (e.g. edge, notepad, calc, spotify, whatsapp, instagram, youtube, code). " +
       "Can also directly search/play on the platform if 'query' is provided (e.g. app: 'youtube', query: 'AC/DC' or app: 'spotify', query: 'coldplay'). " +
@@ -34,10 +38,18 @@ const ACTIONS = {
         app: { type: "string", description: "Friendly app name, web service, or domain" },
         query: { type: "string", description: "Optional search query, video, song, topic, or message to look up within the app" },
       },
+=======
+    description: "Open an application on this machine (e.g. chrome, calculator, notepad).",
+    risk: "safe",
+    params: {
+      type: "object",
+      properties: { app: { type: "string", description: "Friendly app name" } },
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
       required: ["app"],
     },
     handler: system.openApp,
   },
+<<<<<<< HEAD
   open_url: {
     description:
       "Open a website URL in the default browser (Microsoft Edge) on this computer. " +
@@ -67,6 +79,8 @@ const ACTIONS = {
     },
     handler: system.searchWeb,
   },
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   close_app: {
     description: "Close/quit a running application.",
     risk: "safe",
@@ -177,6 +191,7 @@ const ACTIONS = {
   },
 
   send_whatsapp_message: {
+<<<<<<< HEAD
     description:
       "Send or draft a WhatsApp message to a contact name or phone number on WhatsApp Web (Microsoft Edge) or paired phone.",
     risk: "safe",
@@ -232,14 +247,37 @@ const ACTIONS = {
       "Send an Instagram DM to a username — free, drives the real Instagram app on your paired phone. " +
       "Best-effort: Instagram's UI can change and break this; you'll get a clear error if a step fails. " +
       "Requires the Android companion app to be connected.",
+=======
+    description: "Send a WhatsApp message via the configured Twilio WhatsApp sender.",
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     risk: "risky",
     params: {
       type: "object",
       properties: {
+<<<<<<< HEAD
         username: { type: "string", description: "Instagram username to message" },
         message: { type: "string" },
       },
       required: ["username", "message"],
+=======
+        to: { type: "string", description: "Recipient phone number, e.g. +919876543210" },
+        message: { type: "string" },
+      },
+      required: ["to", "message"],
+    },
+    handler: whatsapp.sendWhatsappMessage,
+  },
+  send_instagram_message: {
+    description: "Send an Instagram DM via the Meta Graph API (requires a Business/Creator account).",
+    risk: "risky",
+    params: {
+      type: "object",
+      properties: {
+        recipientId: { type: "string", description: "Instagram-scoped recipient user id" },
+        message: { type: "string" },
+      },
+      required: ["recipientId", "message"],
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     },
     handler: instagram.sendInstagramMessage,
   },
@@ -369,6 +407,7 @@ const ACTIONS = {
     },
     handler: mobile.notify,
   },
+<<<<<<< HEAD
   mobile_open_url: {
     description:
       "Open a URL or app deep link on the connected Android phone (e.g. a wa.me link, tel: number, " +
@@ -387,13 +426,24 @@ const ACTIONS = {
     description:
       "Place an outbound phone call — free, opens the dialer on your paired phone and taps Call. " +
       "Can only dial, can't speak a message into the call. Requires the Android companion app to be connected.",
+=======
+
+  place_call: {
+    description: "Place an outbound phone call via Twilio that speaks a message aloud.",
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     risk: "risky",
     params: {
       type: "object",
       properties: {
         to: { type: "string", description: "Recipient phone number, e.g. +919876543210" },
+<<<<<<< HEAD
       },
       required: ["to"],
+=======
+        message: { type: "string" },
+      },
+      required: ["to", "message"],
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     },
     handler: calls.placeCall,
   },

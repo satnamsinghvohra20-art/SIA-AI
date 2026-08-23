@@ -113,11 +113,14 @@ class CompanionConnection(private val context: Context, private val serverUrl: S
                 svc.speak(params.getString("text"))
                 respond(webSocket, id, true, JSONObject().put("spoken", true))
             }
+<<<<<<< HEAD
             "open_url" -> {
                 val ok = svc.openUrl(params.getString("url"))
                 if (ok) respond(webSocket, id, true, JSONObject().put("opened", params.getString("url")))
                 else respond(webSocket, id, false, error = "Couldn't open that URL/deep link")
             }
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
             else -> respond(webSocket, id, false, error = "Unknown command type: $type")
         }
     }

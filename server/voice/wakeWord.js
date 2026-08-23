@@ -87,6 +87,7 @@ function recordUntilSilence() {
 // calls onCommand(wavFilePath). Runs until the process exits.
 function startListening({ onWake, onCommand, onError }) {
   let Porcupine, PvRecorder;
+<<<<<<< HEAD
   const accessKey = process.env.PICOVOICE_ACCESS_KEY;
   const keywordPath = process.env.PICOVOICE_KEYWORD_PATH;
 
@@ -147,6 +148,52 @@ function startListening({ onWake, onCommand, onError }) {
         // If node-record-lpcm16 or sox is missing, report cleanly
         onError(err);
         await new Promise((r) => setTimeout(r, 4000));
+=======
+  try {
+    ({ Porcupine } = require("@picovoice/porcupine-node"));
+    ({ PvRecorder } = require("@picovoice/pvrecorder-node"));
+  } catch {
+    onError(
+      new Error(
+        "Wake-word deps not installed. Run: npm install @picovoice/porcupine-node @picovoice/pvrecorder-node node-record-lpcm16"
+      )
+    );
+    return;
+  }
+
+  const accessKey = process.env.PICOVOICE_ACCESS_KEY;
+  const keywordPath = process.env.PICOVOICE_KEYWORD_PATH; // path to your "Hey Sia" .ppn file
+  if (!accessKey || !keywordPath) {
+    onError(
+      new Error(
+        "Set PICOVOICE_ACCESS_KEY and PICOVOICE_KEYWORD_PATH in .env. Get a free key and build a custom " +
+          '"Hey Sia" wake word at https://console.picovoice.ai'
+      )
+    );
+    return;
+  }
+
+  const porcupine = new Porcupine(accessKey, [keywordPath], [0.5]);
+  const recorder = new PvRecorder(porcupine.frameLength, -1);
+  recorder.start();
+
+  console.log(`[voice] Listening for wake word (device: ${recorder.getSelectedDevice()})...`);
+
+  (async function loop() {
+    while (true) {
+      const frame = await recorder.read();
+      const keywordIndex = porcupine.process(frame);
+      if (keywordIndex >= 0) {
+        onWake();
+        recorder.stop(); // free the mic for node-record-lpcm16's own capture
+        try {
+          const wavFile = await recordUntilSilence();
+          await onCommand(wavFile);
+        } catch (err) {
+          onError(err);
+        }
+        recorder.start(); // resume wake-word listening
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
       }
     }
   })().catch(onError);

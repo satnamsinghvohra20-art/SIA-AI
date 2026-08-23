@@ -7,6 +7,7 @@
   --text-dim: #8b8fa3;
   --accent: #5ee0c8;
 
+<<<<<<< HEAD
   /* Route colors — distinct neon dispatch colors for all 26+ task categories */
   --route-coding: #5ee0c8;
   --route-coding_fast: #38ef7d;
@@ -35,6 +36,18 @@
   --route-math_science: #706fd3;
   --route-finance_business: #2ed573;
   --route-default: #5ee0c8;
+=======
+  /* Route colors — one per task category, like transit lines on a dispatch board */
+  --route-coding: #5ee0c8;
+  --route-reasoning: #b98cf0;
+  --route-creative: #f0a75e;
+  --route-research: #6fd66f;
+  --route-vision: #f06e9e;
+  --route-long_context: #6ea8f0;
+  --route-data: #e0d75e;
+  --route-fast_general: #9aa0b4;
+  --route-default: #9aa0b4;
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 
   --mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
   --sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -898,6 +911,7 @@ body {
   pointer-events: none;
 }
 
+<<<<<<< HEAD
 /* J.A.R.V.I.S. Arc Reactor Holographic HUD Rings */
 .arc-reactor-ring {
   position: absolute;
@@ -943,6 +957,8 @@ body {
   box-shadow: 0 0 10px #00e5ff, 0 0 20px rgba(0, 229, 255, 0.6) !important;
 }
 
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 /* Orb States */
 .live-voice-overlay.state-listening .orb-core {
   transform: scale(1.08);
@@ -1162,6 +1178,7 @@ body {
   cursor: default;
 }
 
+<<<<<<< HEAD
 .device-form button.device-mic-btn {
   position: relative;
   background: transparent;
@@ -1202,6 +1219,8 @@ body {
   display: block;
 }
 
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 .device-log {
   flex: 1;
   min-height: 120px;
@@ -1298,6 +1317,7 @@ body {
   opacity: 0.6;
   cursor: default;
 }
+<<<<<<< HEAD
 
 /* ============================================================
    300+ AI Models & Agents Catalog Modal
@@ -1589,3 +1609,5 @@ body {
   padding: 40px 20px;
   color: var(--text-dim);
 }
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16

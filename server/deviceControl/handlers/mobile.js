@@ -51,6 +51,7 @@ async function notify(params, context) {
   return mobileBridge.sendCommand(requireSession(context), "notify", params);
 }
 
+<<<<<<< HEAD
 async function openUrl(params, context) {
   // Opens any URL/deep link via the phone's own ACTION_VIEW handling —
   // e.g. a wa.me link jumps straight into a pre-filled WhatsApp chat, a
@@ -60,3 +61,6 @@ async function openUrl(params, context) {
 }
 
 module.exports = { tap, swipe, typeText, openApp, pressKey, readScreen, notify, openUrl };
+=======
+module.exports = { tap, swipe, typeText, openApp, pressKey, readScreen, notify };
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16

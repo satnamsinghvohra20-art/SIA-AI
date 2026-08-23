@@ -16,6 +16,7 @@ _(no active plan)_
 _(none yet)_
 
 ## snapshot: chat_summary
+<<<<<<< HEAD
 Sia is using WhatsApp Web on Microsoft Edge to communicate with her contact "Anuj College." She has sent messages like "I will call you soon" and "Hey bro," but is experiencing visibility issues, stating, "I cannot view messages" and "I can't see any message." Layout shifts complicate chat selection, and she has an unresolved issue with typing in Hebrew, as she can only send messages. Sia is searching for contacts with phone numbers ending in "66" and "6655" for reliable messaging. She seeks clarification on which specific college "Anuj College" refers to and has requested assistance in drafting a message to inquire about it. After refreshing WhatsApp Web, Sia was prompted to check her latest messages. Open threads include confirming the visibility of resent messages, addressing the Hebrew typing issue, obtaining necessary contact information, clarifying the college associated with "Anuj College," and ensuring reliable messaging.
 
 ## snapshot: blockers (last 10)
@@ -32,3 +33,17 @@ Sia is using WhatsApp Web on Microsoft Edge to communicate with her contact "Anu
 
 ## snapshot: last_updated
 2026-08-23T14:30:37.234Z
+=======
+_(nothing summarized yet — still within recent_messages window)_
+
+## snapshot: blockers (last 10)
+- 2026-08-18T04:27:49.360Z — /api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example).
+- 2026-08-18T04:27:54.752Z — /api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example).
+- 2026-08-18T04:28:04.194Z — /api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example).
+- 2026-08-18T04:28:05.781Z — /api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example).
+- 2026-08-18T04:28:27.043Z — /api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example).
+- 2026-08-18T04:28:27.993Z — /api/chat failed: Missing OPENROUTER_API_KEY. Add it to your .env file (see .env.example).
+
+## snapshot: last_updated
+2026-08-18T04:28:28.012Z
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16

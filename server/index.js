@@ -4,7 +4,10 @@ const path = require("path");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
 const { route } = require("./router");
+<<<<<<< HEAD
 const { classify } = require("./classifier");
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 const { MODEL_REGISTRY } = require("./modelRegistry");
 const brain = require("./memory/brainStore");
 const { sessionMiddleware } = require("./session");
@@ -77,6 +80,7 @@ app.get("/api/auth-status", (req, res) => {
   res.json({ authRequired: auth.authEnabled() });
 });
 
+<<<<<<< HEAD
 // Expose public model registry, full 300+ model directory, and voice configuration
 app.get("/api/models", async (req, res) => {
   try {
@@ -93,6 +97,11 @@ app.get("/api/models", async (req, res) => {
       total: Object.keys(MODEL_REGISTRY).length,
     });
   }
+=======
+// Expose public model registry and voice configuration
+app.get("/api/models", (req, res) => {
+  res.json(MODEL_REGISTRY);
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 });
 
 app.get("/api/tts/config", (req, res) => {
@@ -113,7 +122,11 @@ app.post("/api/voice-command", chatLimiter, async (req, res) => {
     return res.status(401).json({ error: "Missing/incorrect X-Sia-Password header" });
   }
 
+<<<<<<< HEAD
   const { text, sessionId, forceModel } = req.body || {};
+=======
+  const { text, sessionId } = req.body || {};
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   if (!text || typeof text !== "string") {
     return res.status(400).json({ error: "text (string) is required" });
   }
@@ -123,10 +136,15 @@ app.post("/api/voice-command", chatLimiter, async (req, res) => {
     "open", "close", "click", "tap", "swipe", "type", "send", "call", "message",
     "whatsapp", "instagram", "screenshot", "volume", "shutdown", "restart",
     "sleep", "scroll", "press", "delete", "move", "read screen", "run",
+<<<<<<< HEAD
     "browse", "search", "youtube", "spotify", "edge", "chrome", "website",
     "web", "url", "play", "pause", "launch", "google", "find", "mute",
   ];
   const isDeviceCommand = !forceModel && DEVICE_VERBS.some((v) => text.toLowerCase().includes(v));
+=======
+  ];
+  const isDeviceCommand = DEVICE_VERBS.some((v) => text.toLowerCase().includes(v));
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 
   try {
     if (isDeviceCommand) {
@@ -134,10 +152,17 @@ app.post("/api/voice-command", chatLimiter, async (req, res) => {
       return res.json({ reply: snapshot.finalAnswer || "Done.", steps: snapshot.log, taskId: snapshot.taskId });
     }
     const persistedHistory = brain.getContextForModel(sid);
+<<<<<<< HEAD
     const result = await route({ message: text, history: persistedHistory, forceModel });
     await brain.appendMessage(sid, "user", text);
     await brain.appendMessage(sid, "assistant", result.answer);
     return res.json({ reply: result.answer, routing: result.routing });
+=======
+    const result = await route({ message: text, history: persistedHistory });
+    await brain.appendMessage(sid, "user", text);
+    await brain.appendMessage(sid, "assistant", result.answer);
+    return res.json({ reply: result.answer });
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   } catch (err) {
     console.error("/api/voice-command failed:", err);
     res.status(500).json({ error: "Something went wrong handling that voice command." });
@@ -149,7 +174,11 @@ app.use("/api", auth.requireAuth);
 
 // Main chat endpoint
 app.post("/api/chat", chatLimiter, async (req, res) => {
+<<<<<<< HEAD
   const { message, forceCategory, forceModel } = req.body || {};
+=======
+  const { message, forceCategory } = req.body;
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   if (!message || typeof message !== "string") {
     return res.status(400).json({ error: "message (string) is required" });
   }
@@ -161,6 +190,7 @@ app.post("/api/chat", chatLimiter, async (req, res) => {
 
   try {
     const persistedHistory = brain.getContextForModel(sessionId);
+<<<<<<< HEAD
     const classification = forceCategory
       ? { category: forceCategory, method: "manual" }
       : await classify(message);
@@ -186,6 +216,9 @@ app.post("/api/chat", chatLimiter, async (req, res) => {
     } else {
       result = await route({ message, history: persistedHistory, forceCategory: forceCategory || null, forceModel });
     }
+=======
+    const result = await route({ message, history: persistedHistory, forceCategory });
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 
     await brain.appendMessage(sessionId, "user", message);
     await brain.appendMessage(sessionId, "assistant", result.answer);

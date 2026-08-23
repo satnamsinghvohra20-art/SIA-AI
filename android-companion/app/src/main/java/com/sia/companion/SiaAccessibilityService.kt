@@ -130,6 +130,7 @@ class SiaAccessibilityService : AccessibilityService() {
     fun speak(text: String) {
         tts.speak(text, TextToSpeech.QUEUE_ADD, null, "sia-notify")
     }
+<<<<<<< HEAD
 
     // Opens any URL/deep link via ACTION_VIEW — this is what lets the server
     // jump straight into WhatsApp's chat screen (wa.me/<number>?text=...),
@@ -146,4 +147,6 @@ class SiaAccessibilityService : AccessibilityService() {
             false
         }
     }
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 }

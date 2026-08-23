@@ -23,6 +23,7 @@ const PLATFORM = os.platform(); // 'win32' | 'darwin' | 'linux'
 // used to launch something unexpected.
 const APP_MAP = {
   win32: {
+<<<<<<< HEAD
     browser: "msedge",
     edge: "msedge",
     "microsoft edge": "msedge",
@@ -62,6 +63,22 @@ const APP_MAP = {
     edge: "Microsoft Edge",
     "microsoft edge": "Microsoft Edge",
     chrome: "Google Chrome",
+=======
+    chrome: "chrome",
+    browser: "chrome",
+    notepad: "notepad",
+    calculator: "calc",
+    explorer: "explorer",
+    "file explorer": "explorer",
+    word: "winword",
+    excel: "excel",
+    spotify: "spotify",
+    settings: "start ms-settings:",
+  },
+  darwin: {
+    chrome: "Google Chrome",
+    browser: "Safari",
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     safari: "Safari",
     notes: "Notes",
     calculator: "Calculator",
@@ -73,10 +90,15 @@ const APP_MAP = {
     settings: "System Settings",
   },
   linux: {
+<<<<<<< HEAD
     browser: "microsoft-edge",
     edge: "microsoft-edge",
     "microsoft edge": "microsoft-edge",
     chrome: "google-chrome",
+=======
+    chrome: "google-chrome",
+    browser: "xdg-open",
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     notepad: "gedit",
     calculator: "gnome-calculator",
     "file explorer": "xdg-open",
@@ -85,6 +107,7 @@ const APP_MAP = {
   },
 };
 
+<<<<<<< HEAD
 const WEB_SERVICES = {
   whatsapp: "https://web.whatsapp.com",
   "whatsapp web": "https://web.whatsapp.com",
@@ -111,12 +134,15 @@ const WEB_SERVICES = {
   bing: "https://www.bing.com",
 };
 
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 function resolveApp(appName) {
   const table = APP_MAP[PLATFORM] || {};
   const key = String(appName || "").trim().toLowerCase();
   return table[key] || null;
 }
 
+<<<<<<< HEAD
 function normalizeUrl(targetUrl) {
   let u = String(targetUrl || "").trim();
   if (!u) return "https://www.google.com";
@@ -126,6 +152,8 @@ function normalizeUrl(targetUrl) {
   return u;
 }
 
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 function run(cmd, args = []) {
   return new Promise((resolve, reject) => {
     execFile(cmd, args, { timeout: 10_000 }, (err, stdout, stderr) => {
@@ -135,6 +163,7 @@ function run(cmd, args = []) {
   });
 }
 
+<<<<<<< HEAD
 async function openUrl({ url, browser = "edge" }) {
   const fullUrl = normalizeUrl(url);
   const b = String(browser || "edge").toLowerCase();
@@ -450,13 +479,37 @@ async function openApp({ app, query }) {
 
   const known = [...Object.keys(APP_MAP[PLATFORM] || {}), ...Object.keys(WEB_SERVICES)].join(", ");
   throw new Error(`"${app}" isn't in the known app list. Known apps & services: ${known}.`);
+=======
+async function openApp({ app }) {
+  const target = resolveApp(app);
+  if (!target) {
+    const known = Object.keys(APP_MAP[PLATFORM] || {}).join(", ");
+    throw new Error(
+      `"${app}" isn't in the known app list for this OS. Known apps: ${known}. ` +
+        `Add it to APP_MAP in server/deviceControl/handlers/system.js to support more.`
+    );
+  }
+
+  if (PLATFORM === "darwin") {
+    await run("open", ["-a", target]);
+  } else if (PLATFORM === "win32") {
+    await run("cmd.exe", ["/c", "start", "", target]);
+  } else {
+    await run(target, []);
+  }
+  return { opened: app };
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 }
 
 async function closeApp({ app }) {
   const target = resolveApp(app) || app;
   if (PLATFORM === "win32") {
+<<<<<<< HEAD
     const image = target.toLowerCase().endsWith(".exe") ? target : `${target}.exe`;
     await run("taskkill", ["/IM", image, "/F"]).catch(() => {
+=======
+    await run("taskkill", ["/IM", `${target}.exe`, "/F"]).catch(() => {
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
       // taskkill exits non-zero if the process wasn't running — not fatal
     });
   } else {
@@ -474,6 +527,7 @@ async function setVolume({ level }) {
   } else if (PLATFORM === "linux") {
     await run("amixer", ["-D", "pulse", "sset", "Master", `${pct}%`]);
   } else if (PLATFORM === "win32") {
+<<<<<<< HEAD
     // Uses WScript.Shell SendKeys for VK_VOLUME_DOWN (174) and VK_VOLUME_UP (175)
     // Guaranteed zero-compilation instant volume control on stock Windows
     const downPresses = 50;
@@ -488,6 +542,13 @@ try {
     await run("powershell.exe", ["-NoProfile", "-Command", script]).catch(() => {});
   }
   return { volume: pct, approximate: PLATFORM === "win32" };
+=======
+    // Windows has no volume CLI out of the box; nircmd.exe (user-supplied,
+    // placed on PATH) is the standard workaround.
+    await run("nircmd.exe", ["setsysvolume", String(Math.round((pct / 100) * 65535))]);
+  }
+  return { volume: pct };
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 }
 
 async function systemPower({ action }) {
@@ -526,6 +587,7 @@ async function takeScreenshot() {
   if (PLATFORM === "darwin") {
     await run("screencapture", ["-x", file]);
   } else if (PLATFORM === "win32") {
+<<<<<<< HEAD
     // Built-in .NET screen capture via PowerShell — no extra tool needed.
     const psPath = file.replace(/\\/g, "/");
     const script = `
@@ -550,6 +612,12 @@ try {
     await run("powershell.exe", ["-NoProfile", "-Command", script]).catch(() => {});
   } else {
     await run("import", ["-window", "root", file]).catch(() => {});
+=======
+    // No single built-in CLI for this on Windows; nircmd is the common shim.
+    await run("nircmd.exe", ["savescreenshot", file]);
+  } else {
+    await run("import", ["-window", "root", file]); // ImageMagick, common on Linux desktops
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   }
   return { screenshot: file };
 }
@@ -568,13 +636,20 @@ async function getSystemInfo() {
 module.exports = {
   openApp,
   closeApp,
+<<<<<<< HEAD
   openUrl,
   searchWeb,
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   setVolume,
   systemPower,
   takeScreenshot,
   getSystemInfo,
+<<<<<<< HEAD
   focusExistingWindow,
   WEB_SERVICES,
   KNOWN_APPS: [...Object.keys(APP_MAP[PLATFORM] || {}), ...Object.keys(WEB_SERVICES)],
+=======
+  KNOWN_APPS: Object.keys(APP_MAP[PLATFORM] || {}),
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 };

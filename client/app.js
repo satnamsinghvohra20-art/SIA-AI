@@ -12,6 +12,7 @@ const loginForm = document.getElementById("login-form");
 const loginPassword = document.getElementById("login-password");
 const loginError = document.getElementById("login-error");
 
+<<<<<<< HEAD
 // 300+ Models Catalog Elements
 const modelsCatalogBtn = document.getElementById("models-catalog-btn");
 const modelsOverlay = document.getElementById("models-overlay");
@@ -23,6 +24,8 @@ const modelsGrid = document.getElementById("models-grid");
 const modelsCountBadge = document.getElementById("models-count-badge");
 const modelsBtnLabel = document.getElementById("models-btn-label");
 
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 // Live Voice Elements
 const liveVoiceOverlay = document.getElementById("live-voice-overlay");
 const liveStatusText = document.getElementById("live-status-text");
@@ -151,6 +154,7 @@ function loadHistory() {
     .catch(() => {});
 }
 
+<<<<<<< HEAD
 const CATEGORY_ICONS = {
   coding: "💻",
   coding_fast: "⚡",
@@ -258,10 +262,36 @@ function loadModels() {
       }
 
       renderModelCards();
+=======
+function loadModels() {
+  fetch("/api/models", { credentials: "same-origin" })
+    .then((r) => (r.status === 401 ? null : r.json()))
+    .then((registry) => {
+      if (!registry) return;
+      if (overrideSelect && overrideSelect.options.length <= 1) {
+        Object.entries(registry).forEach(([category, entry]) => {
+          if (category === "default") return;
+          const opt = document.createElement("option");
+          opt.value = category;
+          opt.textContent = `${category.replace("_", " ")} (${entry.label})`;
+          overrideSelect.appendChild(opt);
+        });
+      }
+      if (liveAgentSelect && liveAgentSelect.options.length <= 1) {
+        Object.entries(registry).forEach(([category, entry]) => {
+          if (category === "default") return;
+          const opt = document.createElement("option");
+          opt.value = category;
+          opt.textContent = `${category.replace("_", " ")} · ${entry.label}`;
+          liveAgentSelect.appendChild(opt);
+        });
+      }
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     })
     .catch(() => {});
 }
 
+<<<<<<< HEAD
 function renderModelCards() {
   if (!modelsGrid) return;
   modelsGrid.innerHTML = "";
@@ -397,6 +427,8 @@ if (modelsFilterTabs) {
   });
 }
 
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 function scrollToBottom() {
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
@@ -443,6 +475,7 @@ function playChime(type) {
     const ctx = getAudioContext();
     if (!ctx) return;
 
+<<<<<<< HEAD
     const now = ctx.currentTime;
 
     if (type === "start") {
@@ -504,6 +537,44 @@ function playChime(type) {
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
       osc.connect(gain);
       gain.connect(ctx.destination);
+=======
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    const now = ctx.currentTime;
+
+    if (type === "start") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    } else if (type === "send") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(580, now);
+      osc.frequency.exponentialRampToValueAtTime(320, now + 0.12);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      osc.start(now);
+      osc.stop(now + 0.18);
+    } else if (type === "ready") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(660, now);
+      osc.frequency.setValueAtTime(880, now + 0.08);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+      osc.start(now);
+      osc.stop(now + 0.22);
+    } else if (type === "interrupt") {
+      osc.type = "square";
+      osc.frequency.setValueAtTime(300, now);
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
       osc.start(now);
       osc.stop(now + 0.06);
     }
@@ -729,6 +800,7 @@ function playNextChunk(btnElement) {
   const naturalVoice =
     voices.find(
       (v) =>
+<<<<<<< HEAD
         (v.lang === "en-GB" || v.lang === "en_GB" || v.name.includes("UK") || v.name.includes("British") || v.name.includes("George") || v.name.includes("Oliver") || v.name.includes("Daniel")) &&
         (v.name.includes("Natural") || v.name.includes("Online") || v.name.includes("Google") || v.name.includes("Premium") || true)
     ) ||
@@ -738,6 +810,14 @@ function playNextChunk(btnElement) {
           v.name.includes("Google") ||
           v.name.includes("Daniel") ||
           v.name.includes("Premium") ||
+=======
+        (v.name.includes("Natural") ||
+          v.name.includes("Google") ||
+          v.name.includes("Samantha") ||
+          v.name.includes("Daniel") ||
+          v.name.includes("Premium") ||
+          v.name.includes("Zira") ||
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
           v.name.includes("David")) &&
         v.lang.startsWith("en")
     ) ||
@@ -820,12 +900,19 @@ async function speakText(text, btnElement = null, onFinish = null) {
         await audio.play();
         return;
       } else {
+<<<<<<< HEAD
         console.warn("ElevenLabs quota exceeded or unavailable. Instantly switching to natural browser voice.");
         currentVoiceEngine = "browser";
       }
     } catch (err) {
       console.warn("ElevenLabs request failed, switching to browser voice:", err);
       currentVoiceEngine = "browser";
+=======
+        console.warn("ElevenLabs not configured or failed, falling back to browser voice.");
+      }
+    } catch (err) {
+      console.warn("ElevenLabs request failed:", err);
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     }
   }
 
@@ -1034,6 +1121,7 @@ function handleLiveSpeechResult(text) {
     setLiveState("LISTENING");
   }
 
+<<<<<<< HEAD
   // Wake-word detection ("Sia", "Hey Sia", "Hi Sia", "Ok Sia", "Jarvis", "Hey Jarvis", "See ya", "Shia")
   const lower = text.toLowerCase().trim();
   const isWakeWord =
@@ -1052,16 +1140,23 @@ function handleLiveSpeechResult(text) {
     playChime("start");
   }
 
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   // Clear previous timer
   if (silenceTimer) {
     clearTimeout(silenceTimer);
   }
 
+<<<<<<< HEAD
   // Direct Voice Talking: automatically sends as soon as you finish speaking (420ms natural pause)
+=======
+  // Direct Voice Talking: automatically sends as soon as you finish speaking (850ms natural pause)
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   silenceTimer = setTimeout(() => {
     if (isLiveModeActive && !isLiveMuted && text.trim().length > 0) {
       dispatchLiveConversation(text.trim());
     }
+<<<<<<< HEAD
   }, 420);
 }
 
@@ -1070,6 +1165,9 @@ function cleanWakePrefix(raw) {
   return raw
     .replace(/^(hey\s+sia|hi\s+sia|ok\s+sia|sia|see\s+ya|seeya|shia|sierra|hey\s+jarvis|jarvis)[,\s:]*/i, "")
     .trim();
+=======
+  }, 850);
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 }
 
 async function dispatchLiveConversation(spokenText) {
@@ -1090,16 +1188,23 @@ async function dispatchLiveConversation(spokenText) {
     try { recognition.stop(); } catch (_) {}
   }
 
+<<<<<<< HEAD
   const cleanedCommand = cleanWakePrefix(spokenText) || spokenText;
 
   setLiveState("THINKING");
   liveUserCaption.textContent = `"${spokenText}"`;
   liveAssistantCaption.textContent = "Processing instruction, sir...";
+=======
+  setLiveState("THINKING");
+  liveUserCaption.textContent = `"${spokenText}"`;
+  liveAssistantCaption.textContent = "Thinking...";
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 
   // Add to background chat window history
   addUserMessage(spokenText);
 
   try {
+<<<<<<< HEAD
     let forceCategory = null;
     let forceModel = null;
     const selectedVal = (liveAgentSelect && liveAgentSelect.value) || (overrideSelect && overrideSelect.value) || null;
@@ -1111,11 +1216,18 @@ async function dispatchLiveConversation(spokenText) {
       }
     }
 
+=======
+    const forceCategory = (liveAgentSelect && liveAgentSelect.value) || null;
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     const res = await fetch("/api/chat", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
+<<<<<<< HEAD
       body: JSON.stringify({ message: cleanedCommand, forceCategory, forceModel }),
+=======
+      body: JSON.stringify({ message: spokenText, forceCategory }),
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     });
     const data = await res.json();
 
@@ -1141,14 +1253,22 @@ async function dispatchLiveConversation(spokenText) {
 
     // Show response in live subtitle
     liveAssistantCaption.textContent = data.answer;
+<<<<<<< HEAD
     setLiveState("SPEAKING", `Sia Speaking (${data.routing ? data.routing.modelLabel : "AI"})`);
+=======
+    setLiveState("SPEAKING", `Speaking (${data.routing ? data.routing.modelLabel : "AI"})`);
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 
     // Speak response out loud, then IMMEDIATELY resume listening for next turn without any buttons!
     speakText(data.answer, null, () => {
       if (isLiveModeActive && !isLiveMuted) {
         playChime("ready");
         liveUserCaption.textContent = "";
+<<<<<<< HEAD
         liveAssistantCaption.textContent = "Sia online. Ready for your command, sir.";
+=======
+        liveAssistantCaption.textContent = "Listening... Speak anytime.";
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
         startListening();
       }
     });
@@ -1170,7 +1290,11 @@ function openLiveMode() {
   liveMuteLabel.textContent = "Mute";
   liveVoiceOverlay.hidden = false;
   liveUserCaption.textContent = "";
+<<<<<<< HEAD
   liveAssistantCaption.textContent = "Sia voice protocol active. Speak your command, sir...";
+=======
+  liveAssistantCaption.textContent = "Direct voice active. Speak your question or idea...";
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   stopSpeaking(false);
   startListening();
   startMicVisualizer();
@@ -1261,6 +1385,7 @@ window.addEventListener("keydown", (e) => {
 function addAssistantMessage(answer, routing, shouldSpeak = true) {
   const el = document.createElement("div");
   el.className = "msg assistant";
+<<<<<<< HEAD
   const category = routing.category || "general";
   const color = `var(--route-${category}, var(--accent))`;
   const isAuto300 = routing.classifiedBy === "300_model_matcher";
@@ -1273,6 +1398,15 @@ function addAssistantMessage(answer, routing, shouldSpeak = true) {
         ${isAuto300 ? `<span class="auto-300-badge" style="font-size:10px; font-weight:700; color:#38bdf8; margin-right:4px; letter-spacing:0.4px;">✨ 300+ AUTO</span>` : ""}
         <span class="model-name">${routing.modelLabel}</span>
         <span>· ${category.replace(/_/g, " ")}</span>
+=======
+  const color = `var(--route-${routing.category}, var(--accent))`;
+  el.innerHTML = `
+    <div class="msg-meta">
+      <div class="route-chip" style="--route-color:${color}">
+        <span class="dot"></span>
+        <span class="model-name">${routing.modelLabel}</span>
+        <span>· ${routing.category.replace("_", " ")}</span>
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
       </div>
       <button class="speak-btn" type="button" title="Read aloud">
         ${getSpeakerIcon(false)}
@@ -1321,6 +1455,7 @@ composer.addEventListener("submit", async (e) => {
   sendBtn.disabled = true;
   const thinkingEl = addThinking();
 
+<<<<<<< HEAD
   let forceCategory = null;
   let forceModel = null;
   const selectedVal = overrideSelect.value || null;
@@ -1331,13 +1466,20 @@ composer.addEventListener("submit", async (e) => {
       forceCategory = selectedVal;
     }
   }
+=======
+  const forceCategory = overrideSelect.value || null;
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
+<<<<<<< HEAD
       body: JSON.stringify({ message, forceCategory, forceModel }),
+=======
+      body: JSON.stringify({ message, forceCategory }),
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
     });
     const data = await res.json();
     thinkingEl.remove();
@@ -1446,6 +1588,7 @@ function applyTaskSnapshot(snapshot) {
 
   if (snapshot.status === "awaiting_confirmation" && snapshot.pendingConfirmation) {
     showConfirmCard(snapshot.pendingConfirmation);
+<<<<<<< HEAD
     const p = snapshot.pendingConfirmation;
     const paramsStr = p.params && Object.keys(p.params).length ? ` — ${JSON.stringify(p.params)}` : "";
     speakDeviceReply(`I need your approval to ${p.action.replace(/_/g, " ")}${paramsStr}.`);
@@ -1456,6 +1599,10 @@ function applyTaskSnapshot(snapshot) {
     } else if (snapshot.status === "error" && snapshot.finalAnswer) {
       speakDeviceReply(snapshot.finalAnswer);
     }
+=======
+  } else {
+    hideConfirmCard();
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
   }
 
   const running = snapshot.status === "running" || snapshot.status === "awaiting_confirmation";
@@ -1463,6 +1610,7 @@ function applyTaskSnapshot(snapshot) {
   deviceInstruction.disabled = running;
 }
 
+<<<<<<< HEAD
 // Speaks a device-agent reply out loud. Reuses the app's existing TTS
 // pipeline (speakText — ElevenLabs if configured, free browser
 // speechSynthesis otherwise) so device replies sound consistent with the
@@ -1478,6 +1626,8 @@ function speakDeviceReply(text) {
   }
 }
 
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
 if (deviceControlBtn) {
   deviceControlBtn.addEventListener("click", openDevicePanel);
 }
@@ -1575,6 +1725,7 @@ if (deviceApproveBtn) {
 if (deviceDenyBtn) {
   deviceDenyBtn.addEventListener("click", () => respondToConfirmation(false));
 }
+<<<<<<< HEAD
 
 // -------------------------------------------------------------
 // Device Control — Voice Input
@@ -1713,3 +1864,5 @@ if (deviceForm) {
 if (deviceCloseBtn) {
   deviceCloseBtn.addEventListener("click", () => stopDeviceListening());
 }
+=======
+>>>>>>> 9422c3abfb40b468243a8ad777f3982b1242aa16
