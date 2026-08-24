@@ -141,15 +141,20 @@ async function sendWhatsappMessage({ to, message }, context = {}) {
 
   // 2. Windows PC: execute automated send or open with written message
   if (PLATFORM === "win32") {
-    // If no specific recipient is given, open WhatsApp Web with the message pre-filled directly
+    const waUrl = number
+      ? `https://web.whatsapp.com/send?phone=${number}&text=${encodeURIComponent(message)}`
+      : `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+
+    // If no specific recipient is given, open WhatsApp with the message pre-filled directly
     if (!recipient && !number) {
-      const waUrl = `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
       await system.openUrl({ url: waUrl });
       return {
-        to: "WhatsApp Web",
+        to: "WhatsApp",
+        opened: "WhatsApp",
+        url: waUrl,
         message,
         status: "drafted",
-        note: `WhatsApp Web opened in your browser with your message written and ready.`,
+        note: `WhatsApp opened with your message written and ready.`,
       };
     }
 
@@ -158,6 +163,8 @@ async function sendWhatsappMessage({ to, message }, context = {}) {
       if (result.sent) {
         return {
           to: recipient || "Contact",
+          opened: "WhatsApp",
+          url: waUrl,
           message,
           status: "sent",
           note: `Message sent to ${recipient || "contact"}.`,
@@ -167,17 +174,15 @@ async function sendWhatsappMessage({ to, message }, context = {}) {
       console.warn("[whatsapp] Windows automation note:", err.message);
     }
 
-    // Direct fallback: Open WhatsApp Web in default browser
-    const waUrl = number
-      ? `https://web.whatsapp.com/send?phone=${number}&text=${encodeURIComponent(message)}`
-      : `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-
+    // Direct fallback: Open WhatsApp with message in browser/desktop
     await system.openUrl({ url: waUrl });
     return {
       to: recipient || "Selected Contact",
+      opened: "WhatsApp",
+      url: waUrl,
       message,
       status: "drafted",
-      note: `Opened WhatsApp Web with message written and ready.`,
+      note: `Opened WhatsApp with message written and ready.`,
     };
   }
 
@@ -187,7 +192,7 @@ async function sendWhatsappMessage({ to, message }, context = {}) {
     : `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
   await system.openUrl({ url: waUrl });
 
-  return { to: recipient || "contact", message, status: "drafted", method: "WhatsApp Web" };
+  return { to: recipient || "contact", opened: "WhatsApp", url: waUrl, message, status: "drafted", method: "WhatsApp Web" };
 }
 
 /**

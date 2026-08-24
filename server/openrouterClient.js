@@ -2,12 +2,20 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 const FALLBACK_MODELS = [
   "openai/gpt-4o-mini",
+  "openrouter/free",
+  "google/gemma-4-31b-it:free",
+  "google/gemma-4-26b-a4b-it:free",
+  "nvidia/nemotron-3.5-lightning:free",
   "meta-llama/llama-3.3-70b-instruct",
   "deepseek/deepseek-chat",
 ];
 
 const FALLBACK_TOOL_MODELS = [
   "openai/gpt-4o-mini",
+  "openrouter/free",
+  "google/gemma-4-31b-it:free",
+  "google/gemma-4-26b-a4b-it:free",
+  "nvidia/nemotron-3.5-lightning:free",
   "meta-llama/llama-3.3-70b-instruct",
   "deepseek/deepseek-chat",
 ];
