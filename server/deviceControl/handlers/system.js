@@ -462,11 +462,11 @@ if ($p) {
 
     try {
       if (PLATFORM === "darwin") {
-        await run("open", ["-a", desktopTarget]);
+        await launchDetached("open", ["-a", desktopTarget]);
       } else if (PLATFORM === "win32") {
-        await run("cmd.exe", ["/c", "start", "", desktopTarget]);
+        await launchDetached("cmd.exe", ["/c", "start", "", desktopTarget]);
       } else {
-        await run(desktopTarget, []);
+        await launchDetached(desktopTarget, []);
       }
       return { opened: app, mode: "desktop_app" };
     } catch (err) {
@@ -474,17 +474,17 @@ if ($p) {
     }
   }
 
-  // 4. Last attempt: try generic start in Windows or search on Edge
+  // 4. Last attempt: try generic start in Windows or search on Google
   if (PLATFORM === "win32") {
     try {
-      await run("cmd.exe", ["/c", "start", "", name]);
+      await launchDetached("cmd.exe", ["/c", "start", "", name]);
       return { opened: app, mode: "system_start" };
     } catch (_) {}
   }
 
   const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(explicitQuery || app)}`;
-  await openUrl({ url: searchUrl, browser: "edge" });
-  return { opened: app, mode: "edge_search_fallback", url: searchUrl };
+  await openUrl({ url: searchUrl });
+  return { opened: app, mode: "web_search_fallback", url: searchUrl };
 }
 
 async function closeApp({ app }) {

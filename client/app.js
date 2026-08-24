@@ -1149,7 +1149,7 @@ async function dispatchLiveConversation(spokenText) {
     }
 
     // Add to chat history in background
-    addAssistantMessage(data.answer, data.routing, false);
+    addAssistantMessage(data.answer, data.routing, false, data.steps);
 
     // Show response in live subtitle
     liveAssistantCaption.textContent = data.answer;
@@ -1270,29 +1270,71 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-function addAssistantMessage(answer, routing, shouldSpeak = true) {
+function addAssistantMessage(answer, routing, shouldSpeak = true, steps = []) {
   const el = document.createElement("div");
   el.className = "msg assistant";
-  const category = routing.category || "general";
+  const category = (routing && routing.category) || "general";
   const color = `var(--route-${category}, var(--accent))`;
-  const isAuto300 = routing.classifiedBy === "300_model_matcher";
-  const titleText = routing.why ? `${routing.why} (Evaluated & Ranked among 300+ AI Models)` : `Model: ${routing.modelLabel}`;
+  const isAuto300 = routing && routing.classifiedBy === "300_model_matcher";
+  const modelLabel = (routing && routing.modelLabel) || "Sia Assistant";
+  const titleText = routing && routing.why ? `${routing.why} (Evaluated & Ranked among 300+ AI Models)` : `Model: ${modelLabel}`;
+
+  // Extract action URLs for client launching and interactive preview cards
+  let actionUrls = [];
+  if (Array.isArray(steps)) {
+    for (const step of steps) {
+      const res = step.result?.result || step.result;
+      const url = res?.url || res?.openedUrl || (typeof res === "string" && res.startsWith("http") ? res : null);
+      if (url) {
+        actionUrls.push({
+          action: step.action || "open_url",
+          name: res.opened || res.to || "Web Application",
+          url: url,
+        });
+        // Direct launch in client browser tab
+        try {
+          window.open(url, "_blank");
+        } catch (_) {}
+      }
+    }
+  }
 
   el.innerHTML = `
     <div class="msg-meta">
       <div class="route-chip" style="--route-color:${color}" title="${titleText}">
         <span class="dot"></span>
         ${isAuto300 ? `<span class="auto-300-badge" style="font-size:10px; font-weight:700; color:#38bdf8; margin-right:4px; letter-spacing:0.4px;">✨ 300+ AUTO</span>` : ""}
-        <span class="model-name">${routing.modelLabel}</span>
+        <span class="model-name">${modelLabel}</span>
         <span>· ${category.replace(/_/g, " ")}</span>
       </div>
       <button class="speak-btn" type="button" title="Read aloud">
         ${getSpeakerIcon(false)}
       </button>
     </div>
-    <div class="bubble" style="--route-color:${color}"></div>
+    <div class="bubble" style="--route-color:${color}">
+      <div class="bubble-text"></div>
+    </div>
   `;
-  el.querySelector(".bubble").textContent = answer;
+
+  const bubble = el.querySelector(".bubble");
+  const bubbleText = el.querySelector(".bubble-text");
+  bubbleText.textContent = answer;
+
+  if (actionUrls.length > 0) {
+    const actionContainer = document.createElement("div");
+    actionContainer.style.cssText = "margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px;";
+    for (const item of actionUrls) {
+      const link = document.createElement("a");
+      link.href = item.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.className = "action-chip-link";
+      link.style.cssText = "display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; font-size: 12px; font-weight: 600; text-decoration: none; transition: all 0.2s ease;";
+      link.innerHTML = `<span>🚀</span><span>Open ${item.name}</span><span style="opacity:0.75;">↗</span>`;
+      actionContainer.appendChild(link);
+    }
+    bubble.appendChild(actionContainer);
+  }
 
   const speakBtn = el.querySelector(".speak-btn");
   speakBtn.addEventListener("click", () => {
@@ -1364,7 +1406,7 @@ composer.addEventListener("submit", async (e) => {
       return;
     }
 
-    addAssistantMessage(data.answer, data.routing, true);
+    addAssistantMessage(data.answer, data.routing, true, data.steps);
   } catch (err) {
     thinkingEl.remove();
     addErrorMessage("Network error: " + err.message);
