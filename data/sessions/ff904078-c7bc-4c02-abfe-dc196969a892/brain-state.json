@@ -1,0 +1,25 @@
+{
+  "current_task": {
+    "id": null,
+    "goal": null,
+    "status": "idle",
+    "started_at": null
+  },
+  "plan": [],
+  "decisions_log": [],
+  "chat_summary": "",
+  "recent_messages": [
+    {
+      "role": "user",
+      "content": "open flipkart",
+      "at": "2026-08-24T14:23:46.562Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Opened Flipkart in your browser, sir. Happy shopping!",
+      "at": "2026-08-24T14:23:46.566Z"
+    }
+  ],
+  "blockers": [],
+  "last_updated": "2026-08-24T14:23:46.566Z"
+}

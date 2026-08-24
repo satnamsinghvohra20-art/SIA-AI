@@ -160,6 +160,7 @@ app.post("/api/chat", chatLimiter, async (req, res) => {
   const sessionId = req.sessionId;
 
   try {
+    const persistedHistory = brain.getContextForModel(sessionId);
     const autoClassification = await classify(message);
     const isDevice = autoClassification.category === "device_control";
 

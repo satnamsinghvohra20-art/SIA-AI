@@ -1,4 +1,4 @@
-const { execFile } = require("child_process");
+const { execFile, spawn } = require("child_process");
 const os = require("os");
 const path = require("path");
 const fs = require("fs/promises");
@@ -142,6 +142,22 @@ function normalizeUrl(targetUrl) {
   return u;
 }
 
+function launchDetached(cmd, args = []) {
+  return new Promise((resolve) => {
+    try {
+      const child = spawn(cmd, args, {
+        detached: true,
+        stdio: "ignore",
+        windowsHide: true,
+      });
+      child.unref();
+      setTimeout(resolve, 150);
+    } catch (_) {
+      resolve();
+    }
+  });
+}
+
 function run(cmd, args = []) {
   return new Promise((resolve, reject) => {
     execFile(cmd, args, { timeout: 10_000 }, (err, stdout, stderr) => {
@@ -157,42 +173,19 @@ async function openUrl({ url, browser = "default" }) {
 
   if (PLATFORM === "win32") {
     const escapedUrl = fullUrl.replace(/'/g, "''");
-    if (b.includes("chrome")) {
-      await run("powershell.exe", [
-        "-NoProfile",
-        "-Command",
-        `Start-Process "chrome.exe" -ArgumentList '${escapedUrl}' -ErrorAction SilentlyContinue`,
-      ]).catch(() =>
-        run("powershell.exe", ["-NoProfile", "-Command", `Start-Process '${escapedUrl}'`])
-      );
-    } else if (b.includes("edge")) {
-      await run("powershell.exe", [
-        "-NoProfile",
-        "-Command",
-        `Start-Process "msedge.exe" -ArgumentList '${escapedUrl}' -ErrorAction SilentlyContinue`,
-      ]).catch(() =>
-        run("powershell.exe", ["-NoProfile", "-Command", `Start-Process '${escapedUrl}'`])
-      );
-    } else {
-      // Primary: Start-Process launches in the user's active default browser with foreground focus
-      await run("powershell.exe", [
-        "-NoProfile",
-        "-Command",
-        `Start-Process '${escapedUrl}'`,
-      ]).catch(() =>
-        run("cmd.exe", ["/c", "start", "", fullUrl])
-      );
-    }
+    // Detached Windows shell start opens in user's default browser (Chrome/Edge) with foreground window focus
+    await launchDetached("cmd.exe", ["/c", "start", "", fullUrl]);
+    await launchDetached("powershell.exe", ["-NoProfile", "-Command", `Start-Process '${escapedUrl}'`]);
   } else if (PLATFORM === "darwin") {
     if (b.includes("chrome")) {
-      await run("open", ["-a", "Google Chrome", fullUrl]).catch(() => run("open", [fullUrl]));
+      await launchDetached("open", ["-a", "Google Chrome", fullUrl]);
     } else if (b.includes("safari")) {
-      await run("open", ["-a", "Safari", fullUrl]).catch(() => run("open", [fullUrl]));
+      await launchDetached("open", ["-a", "Safari", fullUrl]);
     } else {
-      await run("open", [fullUrl]);
+      await launchDetached("open", [fullUrl]);
     }
   } else {
-    await run("xdg-open", [fullUrl]).catch(() => run("google-chrome", [fullUrl]));
+    await launchDetached("xdg-open", [fullUrl]);
   }
   return { openedUrl: fullUrl, browser: "Browser" };
 }

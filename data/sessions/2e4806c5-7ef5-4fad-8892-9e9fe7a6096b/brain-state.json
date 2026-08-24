@@ -1,0 +1,25 @@
+{
+  "current_task": {
+    "id": null,
+    "goal": null,
+    "status": "idle",
+    "started_at": null
+  },
+  "plan": [],
+  "decisions_log": [],
+  "chat_summary": "",
+  "recent_messages": [
+    {
+      "role": "user",
+      "content": "hello, who are you?",
+      "at": "2026-08-24T14:23:47.996Z"
+    },
+    {
+      "role": "assistant",
+      "content": "I am Sia, your advanced personal AI assistant, sir.",
+      "at": "2026-08-24T14:23:47.999Z"
+    }
+  ],
+  "blockers": [],
+  "last_updated": "2026-08-24T14:23:47.999Z"
+}
