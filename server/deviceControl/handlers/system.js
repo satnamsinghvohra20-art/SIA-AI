@@ -156,17 +156,32 @@ async function openUrl({ url, browser = "default" }) {
   const b = String(browser || "default").toLowerCase();
 
   if (PLATFORM === "win32") {
-    // Open in user's active/default browser (Google Chrome, Edge, etc.) and bring to foreground
-    if (b === "chrome") {
-      await run("cmd.exe", ["/c", "start", "chrome", fullUrl]).catch(() =>
-        run("cmd.exe", ["/c", "start", "", fullUrl])
+    const escapedUrl = fullUrl.replace(/'/g, "''");
+    if (b.includes("chrome")) {
+      await run("powershell.exe", [
+        "-NoProfile",
+        "-Command",
+        `Start-Process "chrome.exe" -ArgumentList '${escapedUrl}' -ErrorAction SilentlyContinue`,
+      ]).catch(() =>
+        run("powershell.exe", ["-NoProfile", "-Command", `Start-Process '${escapedUrl}'`])
       );
-    } else if (b === "edge") {
-      await run("cmd.exe", ["/c", "start", "msedge", fullUrl]).catch(() =>
-        run("cmd.exe", ["/c", "start", "", fullUrl])
+    } else if (b.includes("edge")) {
+      await run("powershell.exe", [
+        "-NoProfile",
+        "-Command",
+        `Start-Process "msedge.exe" -ArgumentList '${escapedUrl}' -ErrorAction SilentlyContinue`,
+      ]).catch(() =>
+        run("powershell.exe", ["-NoProfile", "-Command", `Start-Process '${escapedUrl}'`])
       );
     } else {
-      await run("cmd.exe", ["/c", "start", "", fullUrl]);
+      // Primary: Start-Process launches in the user's active default browser with foreground focus
+      await run("powershell.exe", [
+        "-NoProfile",
+        "-Command",
+        `Start-Process '${escapedUrl}'`,
+      ]).catch(() =>
+        run("cmd.exe", ["/c", "start", "", fullUrl])
+      );
     }
   } else if (PLATFORM === "darwin") {
     if (b.includes("chrome")) {

@@ -910,6 +910,15 @@ if (SpeechRecognition) {
       handleLiveSpeechResult(currentText);
     } else {
       input.value = currentText;
+      if (silenceTimer) clearTimeout(silenceTimer);
+      if (final && currentText.trim().length > 0) {
+        silenceTimer = setTimeout(() => {
+          if (!isLiveModeActive && shouldBeListening && input.value.trim().length > 0) {
+            stopListening();
+            composer.dispatchEvent(new Event("submit", { cancelable: true }));
+          }
+        }, 1200);
+      }
     }
   };
 
@@ -988,6 +997,9 @@ if (micBtn) {
   micBtn.addEventListener("click", () => {
     if (shouldBeListening) {
       stopListening();
+      if (input.value.trim().length > 0) {
+        composer.dispatchEvent(new Event("submit", { cancelable: true }));
+      }
     } else {
       stopSpeaking(false);
       startListening();
