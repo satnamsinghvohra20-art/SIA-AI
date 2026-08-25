@@ -1,20 +1,9 @@
 const { execSync } = require("child_process");
 const fs = require("fs");
 
-[
-  "checkOpenRouterFreeModels.js",
-  "testDetachedWa.js",
-  "testFastWaLaunch.js",
-  "testTypeAndWa.js",
-  "testWhatsAppTypingAutomation.js",
-  "clean.js",
-].forEach(f => {
-  try { fs.unlinkSync(f); } catch(_) {}
-});
-
 function run(cmd) {
+  console.log(`> ${cmd}`);
   try {
-    console.log(`> ${cmd}`);
     const out = execSync(cmd, { stdio: "pipe", encoding: "utf8" });
     if (out) console.log(out.trim());
     return true;
@@ -26,7 +15,9 @@ function run(cmd) {
 }
 
 run("git add .");
-run('git commit -m "fix: WhatsApp typing automation, non-blocking UI controls, and truthful verified action links"');
-console.log("Pushing to GitHub...");
+run('git commit -m "feat: reuse active web applications and WhatsApp window across consecutive tasks"');
+console.log("Pushing to GitHub main...");
 run("git push origin main");
-console.log("DONE");
+console.log("SUCCESS");
+
+try { fs.unlinkSync("doGitPush.js"); } catch (_) {}

@@ -133,6 +133,44 @@ function resolveApp(appName) {
   return table[key] || null;
 }
 
+const SERVICE_TITLE_MAP = {
+  whatsapp: ["WhatsApp", "WhatsApp Web"],
+  "whatsapp web": ["WhatsApp", "WhatsApp Web"],
+  youtube: ["YouTube", "YouTube Music"],
+  yt: ["YouTube"],
+  spotify: ["Spotify", "Spotify Free", "Spotify Premium"],
+  "spotify web": ["Spotify"],
+  flipkart: ["Flipkart"],
+  amazon: ["Amazon"],
+  instagram: ["Instagram"],
+  insta: ["Instagram"],
+  gmail: ["Gmail", "Inbox"],
+  mail: ["Gmail", "Mail", "Outlook"],
+  email: ["Gmail", "Mail", "Outlook"],
+  outlook: ["Outlook", "Mail"],
+  chatgpt: ["ChatGPT"],
+  claude: ["Claude"],
+  twitter: ["Twitter", " / X", "X"],
+  x: [" / X", "Twitter", "X"],
+  reddit: ["Reddit"],
+  github: ["GitHub"],
+  netflix: ["Netflix"],
+  linkedin: ["LinkedIn"],
+  discord: ["Discord"],
+  telegram: ["Telegram"],
+  facebook: ["Facebook"],
+  canva: ["Canva"],
+  figma: ["Figma"],
+  edge: ["Microsoft Edge", "Edge"],
+  chrome: ["Google Chrome", "Chrome"],
+  code: ["Visual Studio Code", "Code"],
+  vscode: ["Visual Studio Code", "Code"],
+  notepad: ["Notepad"],
+  calc: ["Calculator"],
+  calculator: ["Calculator"],
+  explorer: ["File Explorer", "Explorer"],
+};
+
 function normalizeUrl(targetUrl) {
   let u = String(targetUrl || "").trim();
   if (!u) return "https://www.google.com";
@@ -171,11 +209,17 @@ async function openUrl({ url, browser = "default" }) {
   const fullUrl = normalizeUrl(url);
   const b = String(browser || "default").toLowerCase();
 
+  // If opening WhatsApp base URL and WhatsApp is already open, just focus the existing window
+  if (fullUrl.includes("web.whatsapp.com") && !fullUrl.includes("/send?")) {
+    const alreadyFocused = await focusExistingWindow("whatsapp");
+    if (alreadyFocused) {
+      return { openedUrl: fullUrl, browser: "Existing Browser Window", reused: true };
+    }
+  }
+
   if (PLATFORM === "win32") {
-    const escapedUrl = fullUrl.replace(/'/g, "''");
-    // Detached Windows shell start opens in user's default browser (Chrome/Edge) with foreground window focus
+    // Single clean launch using default shell association
     await launchDetached("cmd.exe", ["/c", "start", "", fullUrl]);
-    await launchDetached("powershell.exe", ["-NoProfile", "-Command", `Start-Process '${escapedUrl}'`]);
   } else if (PLATFORM === "darwin") {
     if (b.includes("chrome")) {
       await launchDetached("open", ["-a", "Google Chrome", fullUrl]);
@@ -352,10 +396,13 @@ function buildDeepServiceUrl(serviceName, query) {
 
 async function focusExistingWindow(query) {
   if (!query) return false;
-  const q = String(query).replace(/['"`$]/g, "").trim();
-  if (!q) return false;
+  const raw = String(query).trim().toLowerCase();
+  if (!raw) return false;
+
+  const candidateTitles = SERVICE_TITLE_MAP[raw] || [query];
 
   if (PLATFORM === "win32") {
+    const titlesJson = JSON.stringify(candidateTitles);
     const script = `
 Add-Type -TypeDefinition '
 using System;
@@ -365,28 +412,53 @@ public class WinUtil {
   [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
   [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
 }';
-$proc = Get-Process | Where-Object {
-  $_.MainWindowHandle -ne [IntPtr]::Zero -and (
-    ($_.MainWindowTitle -and $_.MainWindowTitle -like '*${q}*') -or
-    ($_.ProcessName -like '*${q}*')
-  )
-} | Select-Object -First 1;
-if ($proc) {
-  if ([WinUtil]::IsIconic($proc.MainWindowHandle)) {
-    [WinUtil]::ShowWindowAsync($proc.MainWindowHandle, 9);
+$wsh = New-Object -ComObject WScript.Shell;
+$titles = ConvertFrom-Json '${titlesJson.replace(/'/g, "''")}';
+$focused = $false;
+
+foreach ($t in $titles) {
+  if ($wsh.AppActivate($t)) {
+    $focused = $true;
+    Write-Output "FOCUSED";
+    break;
   }
-  [WinUtil]::SetForegroundWindow($proc.MainWindowHandle);
-  Write-Output "FOCUSED"
-} else {
-  Write-Output "NOT_FOUND"
+}
+
+if (-not $focused) {
+  foreach ($t in $titles) {
+    $proc = Get-Process | Where-Object {
+      $_.MainWindowHandle -ne [IntPtr]::Zero -and (
+        ($_.MainWindowTitle -and $_.MainWindowTitle -like "*$t*") -or
+        ($_.ProcessName -like "*$t*")
+      )
+    } | Select-Object -First 1;
+    if ($proc) {
+      if ([WinUtil]::IsIconic($proc.MainWindowHandle)) {
+        [WinUtil]::ShowWindowAsync($proc.MainWindowHandle, 9);
+      } else {
+        [WinUtil]::ShowWindowAsync($proc.MainWindowHandle, 5);
+      }
+      [WinUtil]::SetForegroundWindow($proc.MainWindowHandle);
+      $focused = $true;
+      Write-Output "FOCUSED";
+      break;
+    }
+  }
+}
+
+if (-not $focused) {
+  Write-Output "NOT_FOUND";
 }
 `;
-    const res = await run("powershell.exe", ["-NoProfile", "-Command", script]).catch(() => "NOT_FOUND");
+    const res = await run("powershell.exe", ["-NoProfile", "-Command", script.replace(/\r?\n/g, " ")]).catch(() => "NOT_FOUND");
     return res.includes("FOCUSED");
   } else if (PLATFORM === "darwin") {
-    const script = `tell application "${q}" to activate`;
-    const res = await run("osascript", ["-e", script]).catch(() => null);
-    return res !== null;
+    for (const t of candidateTitles) {
+      const script = `tell application "${t}" to activate`;
+      const res = await run("osascript", ["-e", script]).catch(() => null);
+      if (res !== null) return true;
+    }
+    return false;
   }
   return false;
 }
@@ -407,8 +479,20 @@ async function openApp({ app, query }) {
     }
   }
 
-  // 1. Dedicated WhatsApp Launcher (Desktop + Web)
+  // 1. Dedicated WhatsApp Handler (Reuses existing window first!)
   if (name === "whatsapp" || name === "whatsapp web") {
+    const alreadyOpen = await focusExistingWindow("whatsapp");
+    if (alreadyOpen) {
+      if (explicitQuery) {
+        // WhatsApp is already open: send/draft in the open window without opening a new tab
+        const waHandler = require("./whatsapp");
+        await waHandler.sendWhatsappMessage({ message: explicitQuery });
+        return { opened: "WhatsApp", mode: "existing_window_reused", note: `Typed message in existing WhatsApp window: "${explicitQuery}"` };
+      }
+      return { opened: "WhatsApp", mode: "existing_window_focused", alreadyOpen: true };
+    }
+
+    // If not already open, launch WhatsApp
     if (PLATFORM === "win32") {
       const psLaunch = `
 Add-Type -TypeDefinition '
@@ -434,13 +518,21 @@ if ($p) {
     return { opened: "WhatsApp", mode: "whatsapp_launched", url: waUrl };
   }
 
-  // 2. Check if it's a direct URL or domain name
+  // 2. Check if the app or web service is already open before spawning a new instance
+  if (!explicitQuery) {
+    const alreadyFocused = await focusExistingWindow(name);
+    if (alreadyFocused) {
+      return { opened: app, mode: "existing_window_focused", alreadyOpen: true };
+    }
+  }
+
+  // 3. Check if it's a direct URL or domain name
   if (name.startsWith("http://") || name.startsWith("https://") || name.includes(".com") || name.includes(".org") || name.includes(".net") || name.includes(".io") || name.includes(".in") || name.includes(".co") || name.includes(".ai")) {
     const directUrl = name.startsWith("http") ? name : `https://${name}`;
     return openUrl({ url: directUrl });
   }
 
-  // 3. Check if it's a known web service or deep service URL
+  // 4. Check if it's a known web service or deep service URL
   const deepUrl = buildDeepServiceUrl(name, explicitQuery);
   const webUrl = WEB_SERVICES[name];
 
@@ -450,16 +542,9 @@ if ($p) {
     return { opened: app, mode: "website_opened", url: targetUrl };
   }
 
-  // 3. Check for native Desktop application (e.g. calc, notepad, cmd, explorer)
+  // 5. Check for native Desktop application (e.g. calc, notepad, cmd, explorer)
   const desktopTarget = resolveApp(name);
   if (desktopTarget) {
-    if (!explicitQuery) {
-      const alreadyFocused = await focusExistingWindow(name);
-      if (alreadyFocused) {
-        return { opened: app, mode: "existing_window_focused" };
-      }
-    }
-
     try {
       if (PLATFORM === "darwin") {
         await launchDetached("open", ["-a", desktopTarget]);
@@ -474,7 +559,7 @@ if ($p) {
     }
   }
 
-  // 4. Last attempt: try generic start in Windows or search on Google
+  // 6. Last attempt: try generic start in Windows or search on Google
   if (PLATFORM === "win32") {
     try {
       await launchDetached("cmd.exe", ["/c", "start", "", name]);

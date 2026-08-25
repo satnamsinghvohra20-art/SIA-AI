@@ -25,6 +25,7 @@ function toWaMeNumber(to) {
 
 /**
  * Automates sending WhatsApp messages on Windows (Desktop app or default browser WhatsApp Web)
+ * Reuses already open WhatsApp window if present to avoid opening new web tabs.
  */
 async function automateWindowsWhatsAppSend(recipient, messageText, number) {
   const b64Msg = Buffer.from(messageText, "utf8").toString("base64");
@@ -43,29 +44,37 @@ using System.Runtime.InteropServices;
 public class WinUtil {
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
   [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
 }';
-Start-Process '${waProtocol}' -ErrorAction SilentlyContinue;
-Start-Process '${waWebUrl}' -ErrorAction SilentlyContinue;
-Start-Sleep -Milliseconds 1200;
-$waProc = Get-Process | Where-Object {
-  $_.MainWindowHandle -ne [IntPtr]::Zero -and (
-    ($_.MainWindowTitle -and $_.MainWindowTitle -like '*WhatsApp*') -or
-    ($_.ProcessName -like '*WhatsApp*')
-  )
-} | Select-Object -First 1;
-if ($waProc) {
-  [WinUtil]::ShowWindowAsync($waProc.MainWindowHandle, 9);
-  [WinUtil]::SetForegroundWindow($waProc.MainWindowHandle);
-  Start-Sleep -Milliseconds 400;
-  [System.Windows.Forms.SendKeys]::SendWait('{ENTER}');
+$wsh = New-Object -ComObject WScript.Shell;
+$focused = $wsh.AppActivate("WhatsApp");
+
+if (-not $focused) {
+  Start-Process '${waWebUrl}' -ErrorAction SilentlyContinue;
+  Start-Sleep -Milliseconds 1500;
+  $waProc = Get-Process | Where-Object {
+    $_.MainWindowHandle -ne [IntPtr]::Zero -and (
+      ($_.MainWindowTitle -and $_.MainWindowTitle -like '*WhatsApp*') -or
+      ($_.ProcessName -like '*WhatsApp*')
+    )
+  } | Select-Object -First 1;
+  if ($waProc) {
+    if ([WinUtil]::IsIconic($waProc.MainWindowHandle)) {
+      [WinUtil]::ShowWindowAsync($waProc.MainWindowHandle, 9);
+    }
+    [WinUtil]::SetForegroundWindow($waProc.MainWindowHandle);
+    Start-Sleep -Milliseconds 500;
+  }
 }
+Start-Sleep -Milliseconds 400;
+[System.Windows.Forms.SendKeys]::SendWait('{ENTER}');
 Write-Output "SENT_SUCCESS";
 `;
     const output = await run("powershell.exe", ["-Sta", "-NoProfile", "-Command", script.replace(/\r?\n/g, " ")]).catch(() => "");
     return { sent: output.includes("SENT_SUCCESS"), openedWeb: true };
   }
 
-  // 2. Named contact search automation
+  // 2. Named contact or active chat automation (Reuses existing WhatsApp window!)
   const script = `
 Add-Type -AssemblyName System.Windows.Forms;
 Add-Type -TypeDefinition '
@@ -74,32 +83,62 @@ using System.Runtime.InteropServices;
 public class WinUtil {
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
   [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
 }';
 
-# Launch or activate WhatsApp Desktop
-Start-Process "whatsapp:" -ErrorAction SilentlyContinue;
-Start-Sleep -Milliseconds 500;
+$wsh = New-Object -ComObject WScript.Shell;
+$focused = $wsh.AppActivate("WhatsApp");
 
-$waProc = Get-Process | Where-Object {
-  $_.MainWindowHandle -ne [IntPtr]::Zero -and (
-    ($_.MainWindowTitle -and $_.MainWindowTitle -like '*WhatsApp*') -or
-    ($_.ProcessName -like '*WhatsApp*')
-  )
-} | Select-Object -First 1;
+if (-not $focused) {
+  # Try finding browser or desktop process with WhatsApp title
+  $waProc = Get-Process | Where-Object {
+    $_.MainWindowHandle -ne [IntPtr]::Zero -and (
+      ($_.MainWindowTitle -and $_.MainWindowTitle -like '*WhatsApp*') -or
+      ($_.ProcessName -like '*WhatsApp*')
+    )
+  } | Select-Object -First 1;
 
-if ($waProc) {
-  [WinUtil]::ShowWindowAsync($waProc.MainWindowHandle, 9);
-  [WinUtil]::SetForegroundWindow($waProc.MainWindowHandle);
-  Start-Sleep -Milliseconds 400;
+  if ($waProc) {
+    if ([WinUtil]::IsIconic($waProc.MainWindowHandle)) {
+      [WinUtil]::ShowWindowAsync($waProc.MainWindowHandle, 9);
+    } else {
+      [WinUtil]::ShowWindowAsync($waProc.MainWindowHandle, 5);
+    }
+    [WinUtil]::SetForegroundWindow($waProc.MainWindowHandle);
+    $focused = $true;
+    Start-Sleep -Milliseconds 300;
+  }
+}
+
+if (-not $focused) {
+  # Only launch if WhatsApp is not open anywhere
+  Start-Process "whatsapp:" -ErrorAction SilentlyContinue;
+  Start-Sleep -Milliseconds 600;
+  $waProc = Get-Process | Where-Object {
+    $_.MainWindowHandle -ne [IntPtr]::Zero -and (
+      ($_.MainWindowTitle -and $_.MainWindowTitle -like '*WhatsApp*') -or
+      ($_.ProcessName -like '*WhatsApp*')
+    )
+  } | Select-Object -First 1;
+  if ($waProc) {
+    [WinUtil]::ShowWindowAsync($waProc.MainWindowHandle, 9);
+    [WinUtil]::SetForegroundWindow($waProc.MainWindowHandle);
+    Start-Sleep -Milliseconds 400;
+  }
 }
 
 if ('${b64Recipient}'.Length -gt 0) {
   $rec = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${b64Recipient}'));
-  Set-Clipboard -Value $rec;
+  # Clear existing dialogs/search
+  [System.Windows.Forms.SendKeys]::SendWait('{ESC}');
+  Start-Sleep -Milliseconds 150;
+  # Open search bar in WhatsApp
   [System.Windows.Forms.SendKeys]::SendWait('^f');
-  Start-Sleep -Milliseconds 300;
+  Start-Sleep -Milliseconds 250;
+  Set-Clipboard -Value $rec;
   [System.Windows.Forms.SendKeys]::SendWait('^v');
-  Start-Sleep -Milliseconds 900;
+  Start-Sleep -Milliseconds 750;
+  # Select contact
   [System.Windows.Forms.SendKeys]::SendWait('{ENTER}');
   Start-Sleep -Milliseconds 450;
 }
@@ -116,7 +155,7 @@ Write-Output "SENT_SUCCESS";
   const output = await run("powershell.exe", ["-Sta", "-NoProfile", "-Command", script.replace(/\r?\n/g, " ")]).catch(() => "");
   return {
     sent: output.includes("SENT_SUCCESS"),
-    openedWeb: true,
+    openedWeb: !output.includes("SENT_SUCCESS"),
   };
 }
 
@@ -139,13 +178,37 @@ async function sendWhatsappMessage({ to, message }, context = {}) {
     return { to: recipient || "recipient", message, status: "sent", method: "on-device WhatsApp" };
   }
 
-  // 2. Windows PC: execute automated send or open with written message
+  // 2. Windows PC: check for existing WhatsApp window and automate directly
   if (PLATFORM === "win32") {
+    // Check if WhatsApp is already open
+    const isAlreadyOpen = await system.focusExistingWindow("whatsapp");
+
+    if (isAlreadyOpen) {
+      // WhatsApp is already open — reuse existing window without opening any new browser tab!
+      try {
+        const result = await automateWindowsWhatsAppSend(recipient, message, number);
+        if (result.sent) {
+          return {
+            to: recipient || "Active Chat",
+            opened: "WhatsApp",
+            message,
+            status: "sent",
+            reused: true,
+            note: recipient
+              ? `Message sent to ${recipient} in existing WhatsApp window, sir.`
+              : `Message sent to active chat in existing WhatsApp window, sir.`,
+          };
+        }
+      } catch (err) {
+        console.warn("[whatsapp] Direct window automation note:", err.message);
+      }
+    }
+
+    // If no specific recipient is given and WhatsApp wasn't open, open it
     const waUrl = number
       ? `https://web.whatsapp.com/send?phone=${number}&text=${encodeURIComponent(message)}`
       : `https://web.whatsapp.com/send?text=${encodeURIComponent(message)}`;
 
-    // If no specific recipient is given, open WhatsApp with the message pre-filled directly
     if (!recipient && !number) {
       await system.openUrl({ url: waUrl });
       return {
@@ -154,7 +217,7 @@ async function sendWhatsappMessage({ to, message }, context = {}) {
         url: waUrl,
         message,
         status: "drafted",
-        note: `WhatsApp opened with your message written and ready.`,
+        note: `WhatsApp opened with your message written and ready, sir.`,
       };
     }
 
@@ -167,7 +230,7 @@ async function sendWhatsappMessage({ to, message }, context = {}) {
           url: waUrl,
           message,
           status: "sent",
-          note: `Message sent to ${recipient || "contact"}.`,
+          note: `Message sent to ${recipient || "contact"}, sir.`,
         };
       }
     } catch (err) {
@@ -182,7 +245,7 @@ async function sendWhatsappMessage({ to, message }, context = {}) {
       url: waUrl,
       message,
       status: "drafted",
-      note: `Opened WhatsApp with message written and ready.`,
+      note: `Opened WhatsApp with message written and ready, sir.`,
     };
   }
 

@@ -24,9 +24,9 @@ const screenReader = require("./handlers/screenReader");
 const ACTIONS = {
   open_app: {
     description:
-      "Open an application or web service on this machine (e.g. edge, notepad, calc, spotify, whatsapp, instagram, youtube, code). " +
-      "Can also directly search/play on the platform if 'query' is provided (e.g. app: 'youtube', query: 'AC/DC' or app: 'spotify', query: 'coldplay'). " +
-      "If a Windows app is not installed or not logged in, it automatically opens the web version in Microsoft Edge.",
+      "Open or switch to an application or web service on this machine (e.g. whatsapp, youtube, spotify, flipkart, amazon, instagram, edge, chrome, notepad, calc). " +
+      "If the app or website is already open from a previous task, it reuses and brings the existing window to the front instead of opening a duplicate web tab. " +
+      "Can also directly search/play on the platform if 'query' is provided (e.g. app: 'youtube', query: 'AC/DC' or app: 'spotify', query: 'coldplay').",
     risk: "safe",
     params: {
       type: "object",
@@ -40,14 +40,13 @@ const ACTIONS = {
   },
   open_url: {
     description:
-      "Open a website URL in the default browser (Microsoft Edge) on this computer. " +
-      "Use this for any web task, online service, video, or website (e.g. 'https://www.youtube.com', 'https://web.whatsapp.com', 'https://www.instagram.com', 'https://open.spotify.com').",
+      "Open a website URL in the browser on this computer. If the website is already open in an existing window, it will focus the existing window instead of creating duplicate tabs.",
     risk: "safe",
     params: {
       type: "object",
       properties: {
         url: { type: "string", description: "The full URL or web address to open" },
-        browser: { type: "string", description: "Browser to use (default: 'edge')" },
+        browser: { type: "string", description: "Browser to use (default: 'default')" },
       },
       required: ["url"],
     },
@@ -178,7 +177,7 @@ const ACTIONS = {
 
   send_whatsapp_message: {
     description:
-      "Send or draft a WhatsApp message to a contact name or phone number on WhatsApp Web (Microsoft Edge) or paired phone.",
+      "Send or draft a WhatsApp message to a contact name or phone number on WhatsApp Web or WhatsApp Desktop. Reuses the already open WhatsApp window if present without opening a new browser tab.",
     risk: "safe",
     params: {
       type: "object",
