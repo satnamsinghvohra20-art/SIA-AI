@@ -8,6 +8,10 @@ const uiControl = require("./deviceControl/handlers/uiControl");
  * Bypasses the multi-second LLM tool-calling loop for clear, deterministic
  * instructions (e.g. opening apps, playing songs/videos, web searches, WhatsApp).
  * 
+ * Supports:
+ *  - Single-shot direct actions (<50ms)
+ *  - Multi-intent compound chaining (e.g. "open youtube and play interstellar and mute")
+ * 
  * Returns:
  *  - { matched: true, answer: string, result: object, steps: array }
  *  - { matched: false } -> passes through to LLM device agent / router
@@ -29,9 +33,8 @@ function cleanCommand(text) {
     .trim();
 }
 
-async function tryFastDispatch(rawText) {
-  const text = cleanCommand(rawText);
-  if (!text) return { matched: false };
+async function executeSingleIntent(text) {
+  if (!text) return null;
 
   // 1. "play <song/video> on youtube / spotify"
   const playMatch = text.match(/^(?:play|listen to)\s+(.+?)(?:\s+on\s+(youtube|spotify))?$/i);
@@ -40,11 +43,10 @@ async function tryFastDispatch(rawText) {
     const targetApp = (playMatch[2] || "youtube").toLowerCase();
     const res = await system.openApp({ app: targetApp, query });
     return {
-      matched: true,
-      answer: `Playing ${query} on ${targetApp === "spotify" ? "Spotify" : "YouTube"}, sir.`,
+      action: "open_app",
+      params: { app: targetApp, query },
+      summary: `Playing ${query} on ${targetApp === "spotify" ? "Spotify" : "YouTube"}`,
       result: res,
-      steps: [{ action: "open_app", params: { app: targetApp, query }, result: res }],
-      category: "device_control",
     };
   }
 
@@ -62,11 +64,10 @@ async function tryFastDispatch(rawText) {
       res = await system.openApp({ app: platform, query });
     }
     return {
-      matched: true,
-      answer: `Searched for "${query}" on ${platform}, sir.`,
+      action: actionName,
+      params: { query, platform },
+      summary: `Searched for "${query}" on ${platform}`,
       result: res,
-      steps: [{ action: actionName, params: { query, platform }, result: res }],
-      category: "device_control",
     };
   }
 
@@ -77,11 +78,10 @@ async function tryFastDispatch(rawText) {
     const message = waMatch[2] ? waMatch[2].trim() : "Hello";
     const res = await whatsapp.sendWhatsappMessage({ to, message });
     return {
-      matched: true,
-      answer: `WhatsApp message sent to ${to}, sir.`,
+      action: "send_whatsapp_message",
+      params: { to, message },
+      summary: `WhatsApp message sent to ${to}`,
       result: res,
-      steps: [{ action: "send_whatsapp_message", params: { to, message }, result: res }],
-      category: "device_control",
     };
   }
 
@@ -95,15 +95,14 @@ async function tryFastDispatch(rawText) {
     if (isKnown) {
       const res = await system.openApp({ app: rawApp, query });
       const prettyApp = rawApp.charAt(0).toUpperCase() + rawApp.slice(1);
-      const answer = res?.reused
-        ? `Switched to your active ${prettyApp} window, sir.`
-        : `Opened ${prettyApp}, sir.`;
+      const summary = res?.reused
+        ? `Switched to active ${prettyApp}`
+        : `Opened ${prettyApp}`;
       return {
-        matched: true,
-        answer,
+        action: "open_app",
+        params: { app: rawApp, query },
+        summary,
         result: res,
-        steps: [{ action: "open_app", params: { app: rawApp, query }, result: res }],
-        category: "device_control",
       };
     }
   }
@@ -112,36 +111,96 @@ async function tryFastDispatch(rawText) {
   if (text === "mute" || text === "mute volume" || text === "mute sound") {
     const res = await system.setVolume({ mute: true });
     return {
-      matched: true,
-      answer: "Audio muted, sir.",
+      action: "set_volume",
+      params: { mute: true },
+      summary: "Muted volume",
       result: res,
-      steps: [{ action: "set_volume", params: { mute: true }, result: res }],
-      category: "device_control",
     };
   }
   if (text === "unmute" || text === "unmute volume" || text === "unmute sound") {
     const res = await system.setVolume({ mute: false });
     return {
-      matched: true,
-      answer: "Audio unmuted, sir.",
+      action: "set_volume",
+      params: { mute: false },
+      summary: "Unmuted volume",
       result: res,
-      steps: [{ action: "set_volume", params: { mute: false }, result: res }],
-      category: "device_control",
     };
   }
   if (text.includes("take a screenshot") || text === "screenshot") {
     const res = await system.takeScreenshot({});
     return {
-      matched: true,
-      answer: "Screenshot captured successfully, sir.",
+      action: "take_screenshot",
+      params: {},
+      summary: "Captured screenshot",
       result: res,
-      steps: [{ action: "take_screenshot", params: {}, result: res }],
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Splits compound commands like:
+ * "open youtube and play lo-fi and then mute volume"
+ */
+function splitCompoundClauses(text) {
+  const parts = text.split(/\s+(?:and then|and also|then)\s+/i);
+  if (parts.length > 1) return parts.map(p => p.trim()).filter(Boolean);
+
+  // Split on " and " followed by common action verbs
+  const verbRegex = /\s+and\s+(?=(?:open|play|search|send|launch|mute|unmute|take|switch|type)\b)/i;
+  const subParts = text.split(verbRegex);
+  if (subParts.length > 1) return subParts.map(p => p.trim()).filter(Boolean);
+
+  return [text];
+}
+
+async function tryFastDispatch(rawText) {
+  const text = cleanCommand(rawText);
+  if (!text) return { matched: false };
+
+  const clauses = splitCompoundClauses(text);
+
+  // Single intent execution
+  if (clauses.length === 1) {
+    const single = await executeSingleIntent(clauses[0]);
+    if (!single) return { matched: false };
+    return {
+      matched: true,
+      answer: `${single.summary}, sir.`,
+      result: single.result,
+      steps: [{ action: single.action, params: single.params, result: single.result }],
       category: "device_control",
     };
   }
 
-  // Not a direct deterministic command -> pass to LLM
-  return { matched: false };
+  // Compound multi-intent execution
+  const executedSteps = [];
+  const summaries = [];
+
+  for (const clause of clauses) {
+    const res = await executeSingleIntent(clause);
+    if (res) {
+      executedSteps.push({ action: res.action, params: res.params, result: res.result });
+      summaries.push(res.summary);
+    }
+  }
+
+  if (executedSteps.length === 0) {
+    return { matched: false };
+  }
+
+  const combinedAnswer = summaries.length === 1
+    ? `${summaries[0]}, sir.`
+    : `${summaries.slice(0, -1).join(", ")} and ${summaries[summaries.length - 1]}, sir.`;
+
+  return {
+    matched: true,
+    answer: combinedAnswer,
+    result: executedSteps[executedSteps.length - 1].result,
+    steps: executedSteps,
+    category: "device_control",
+  };
 }
 
 module.exports = { tryFastDispatch };
