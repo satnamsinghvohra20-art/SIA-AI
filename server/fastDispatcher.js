@@ -50,6 +50,21 @@ async function executeSingleIntent(text) {
     };
   }
 
+  // 2. "order/buy/purchase <item> on flipkart/amazon" or "order/buy <item>"
+  const buyMatch = text.match(/^(?:order|buy|purchase|shop\s+for)\s+(.+?)(?:\s+(?:on|from|in)\s+(flipkart|amazon|swiggy|zomato|myntra|blinkit|zepto))?$/i);
+  if (buyMatch) {
+    const item = buyMatch[1].trim();
+    const platform = (buyMatch[2] || "flipkart").toLowerCase();
+    const res = await system.openApp({ app: platform, query: item });
+    const prettyPlatform = platform.charAt(0).toUpperCase() + platform.slice(1);
+    return {
+      action: "open_app",
+      params: { app: platform, query: item },
+      summary: `Opened ${prettyPlatform} with ${item} ready on screen`,
+      result: res,
+    };
+  }
+
   // 2. "search for <query> on <engine/site>" or "search <query>" or "google <query>"
   const searchMatch = text.match(/^(?:search(?:\s+for)?|google|look up|find)\s+(.+?)(?:\s+(?:on|in)\s+(google|youtube|amazon|flipkart|wikipedia|reddit))?$/i);
   if (searchMatch && !text.startsWith("search web for news")) {

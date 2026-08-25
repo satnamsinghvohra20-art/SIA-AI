@@ -37,7 +37,7 @@ async function click({ x, y, button = "left", double = false }) {
   if (PLATFORM === "win32") {
     const clicks = double ? 2 : 1;
     const script = `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(${x},${y}); Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public class Click { [DllImport("user32.dll")] public static extern void mouse_event(uint f, uint dx, uint dy, uint data, int extra); }'; for ($i=0; $i -lt ${clicks}; $i++) { [Click]::mouse_event(0x0002,0,0,0,0); [Click]::mouse_event(0x0004,0,0,0,0); }`;
-    await launchDetached("powershell.exe", ["-NoProfile", "-Command", script]);
+    await launchDetached("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]);
   } else if (PLATFORM === "darwin") {
     const clickCount = double ? 2 : 1;
     const script = `tell application "System Events" to ${clickCount === 2 ? "double " : ""}click at {${x}, ${y}}`;
@@ -57,7 +57,7 @@ async function typeText({ text }) {
   if (PLATFORM === "win32") {
     const b64 = Buffer.from(text, "utf8").toString("base64");
     const script = `Add-Type -AssemblyName System.Windows.Forms; $bytes = [Convert]::FromBase64String('${b64}'); $decoded = [System.Text.Encoding]::UTF8.GetString($bytes); Set-Clipboard -Value $decoded; Start-Sleep -Milliseconds 60; [System.Windows.Forms.SendKeys]::SendWait('^v');`;
-    await launchDetached("powershell.exe", ["-Sta", "-NoProfile", "-Command", script]);
+    await launchDetached("powershell.exe", ["-Sta", "-NoProfile", "-NonInteractive", "-Command", script]);
   } else if (PLATFORM === "darwin") {
     const escaped = text.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
     const script = `set the clipboard to "${escaped}"\ntell application "System Events" to keystroke "v" using {command down}`;
@@ -77,7 +77,7 @@ async function pressKey({ key }) {
   if (PLATFORM === "win32") {
     const map = { enter: "{ENTER}", tab: "{TAB}", escape: "{ESC}", backspace: "{BACKSPACE}", up: "{UP}", down: "{DOWN}", left: "{LEFT}", right: "{RIGHT}" };
     const seq = map[key.toLowerCase()] || `{${key}}`;
-    await launchDetached("powershell.exe", ["-NoProfile", "-Command", `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait("${seq}")`]);
+    await launchDetached("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait("${seq}")`]);
   } else if (PLATFORM === "darwin") {
     const map = { enter: "return", escape: "escape", backspace: "delete", tab: "tab", up: "up arrow", down: "down arrow", left: "left arrow", right: "right arrow" };
     const named = map[key.toLowerCase()];
@@ -110,7 +110,7 @@ async function scroll({ direction = "down", amount = 3 }) {
   if (PLATFORM === "win32") {
     const delta = dir === "up" ? 120 * amount : -120 * amount;
     const script = `Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class Scroll{[DllImport("user32.dll")]public static extern void mouse_event(uint f,uint dx,uint dy,uint data,int extra);}'; [Scroll]::mouse_event(0x0800,0,0,${delta},0)`;
-    await run("powershell.exe", ["-NoProfile", "-Command", script]);
+    await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]);
   } else if (PLATFORM === "darwin") {
     const clicks = dir === "up" ? amount : -amount;
     await run("osascript", ["-e", `tell application "System Events" to scroll ${clicks}`]).catch(() => {});

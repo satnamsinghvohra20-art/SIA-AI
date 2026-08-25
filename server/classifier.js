@@ -181,7 +181,10 @@ const CATEGORY_KEYWORDS = {
 
 const DEVICE_CONTROL_PATTERNS = [
   /\b(open|launch|start|close|exit|quit|play|pause|stop|resume)\s+([a-z0-9\.\s]+)/i,
+  /\b(order|buy|purchase|shop\s+for|add\s+to\s+cart|checkout)\b/i,
+  /\b(run\s+command|run\s+terminal|execute\s+command|execute|exec|run\s+shell|run\s+script)\b/i,
   /\b(send|draft|text|message|dm)\s+(a\s+)?(whatsapp|instagram|email|message|text|to)\b/i,
+  /\b(call|dial|phone|ring)\s+([a-z0-9+\s]+)/i,
   /\b(read|view|check|inspect|show|tell\s+me)\s+(my\s+)?(screen|messages|chats|whatsapp|notifications|inbox|window)\b/i,
   /\b(what\s+is|what's)\s+(on\s+my|on\s+the)\s+screen\b/i,
   /\b(take|capture)\s+(a\s+)?(screenshot|screen\s+capture)\b/i,
