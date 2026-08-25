@@ -8,7 +8,7 @@ function getActiveWindowSummary() {
   if (process.platform !== "win32") return Promise.resolve("");
   return new Promise((resolve) => {
     const ps = `Get-Process | Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero -and $_.MainWindowTitle -and $_.MainWindowTitle.Trim().Length -gt 0 } | Select-Object -Property ProcessName, MainWindowTitle | ConvertTo-Json -Compress`;
-    execFile("powershell.exe", ["-NoProfile", "-Command", ps], { timeout: 3000 }, (err, stdout) => {
+    execFile("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", ps], { timeout: 3000 }, (err, stdout) => {
       try {
         const parsed = JSON.parse(stdout || "[]");
         const list = Array.isArray(parsed) ? parsed : [parsed];

@@ -107,7 +107,36 @@ async function executeSingleIntent(text) {
     }
   }
 
-  // 5. System controls: "mute", "unmute", "take a screenshot"
+  // 5. Direct Shell Command Execution: "run command <cmd>", "execute <cmd>", "run shell <cmd>"
+  const cmdMatch = text.match(/^(?:run\s+command|run\s+terminal|execute\s+command|execute|exec|run\s+shell)\s+(.+)$/i);
+  if (cmdMatch) {
+    const scripts = require("./deviceControl/handlers/scripts");
+    const cmd = cmdMatch[1].trim();
+    const res = await scripts.runCommand({ command: cmd });
+    const outputPreview = res.stdout ? res.stdout.slice(0, 150) : (res.stderr ? res.stderr.slice(0, 150) : "Done");
+    return {
+      action: "run_command",
+      params: { command: cmd },
+      summary: `Executed command: ${cmd}. Output: ${outputPreview}`,
+      result: res,
+    };
+  }
+
+  // 6. Direct Phone Call / Dialer: "call <number/person>" or "dial <number>"
+  const callMatch = text.match(/^(?:call|dial)\s+([a-zA-Z0-9+\s]+)$/i);
+  if (callMatch && !text.includes("whatsapp") && !text.includes("api")) {
+    const calls = require("./deviceControl/handlers/calls");
+    const target = callMatch[1].trim();
+    const res = await calls.placeCall({ to: target });
+    return {
+      action: "place_call",
+      params: { to: target },
+      summary: `Dialing ${target}`,
+      result: res,
+    };
+  }
+
+  // 7. System controls: "mute", "unmute", "take a screenshot"
   if (text === "mute" || text === "mute volume" || text === "mute sound") {
     const res = await system.setVolume({ mute: true });
     return {
