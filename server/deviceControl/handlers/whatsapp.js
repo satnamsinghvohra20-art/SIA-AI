@@ -127,28 +127,34 @@ if (-not $focused) {
   }
 }
 
+$prevClip = try { [System.Windows.Forms.Clipboard]::GetText() } catch { '' };
+
 if ('${b64Recipient}'.Length -gt 0) {
   $rec = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${b64Recipient}'));
-  # Clear existing dialogs/search
   [System.Windows.Forms.SendKeys]::SendWait('{ESC}');
-  Start-Sleep -Milliseconds 80;
-  # Open search bar in WhatsApp
+  Start-Sleep -Milliseconds 60;
   [System.Windows.Forms.SendKeys]::SendWait('^f');
-  Start-Sleep -Milliseconds 120;
+  Start-Sleep -Milliseconds 100;
   Set-Clipboard -Value $rec;
   [System.Windows.Forms.SendKeys]::SendWait('^v');
-  Start-Sleep -Milliseconds 350;
-  # Select contact
+  Start-Sleep -Milliseconds 300;
   [System.Windows.Forms.SendKeys]::SendWait('{ENTER}');
-  Start-Sleep -Milliseconds 250;
+  Start-Sleep -Milliseconds 200;
 }
 
 $msg = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${b64Msg}'));
 Set-Clipboard -Value $msg;
-Start-Sleep -Milliseconds 80;
+Start-Sleep -Milliseconds 60;
 [System.Windows.Forms.SendKeys]::SendWait('^v');
-Start-Sleep -Milliseconds 150;
+Start-Sleep -Milliseconds 100;
 [System.Windows.Forms.SendKeys]::SendWait('{ENTER}');
+
+# Restore previous user clipboard contents
+if ($prevClip) {
+  Start-Sleep -Milliseconds 100;
+  try { Set-Clipboard -Value $prevClip } catch {}
+}
+
 Write-Output "SENT_SUCCESS";
 `;
 

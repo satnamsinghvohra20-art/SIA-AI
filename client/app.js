@@ -1013,6 +1013,116 @@ if (micBtn) {
 let isLiveModeActive = false;
 let liveState = "IDLE"; // "IDLE" | "LISTENING" | "THINKING" | "SPEAKING" | "MUTED"
 let isLiveMuted = false;
+let liveAudioCtx = null;
+let liveAnalyser = null;
+let liveMicStream = null;
+let liveAnimFrame = null;
+let isUserActivelySpeaking = false;
+
+function getAudioContext() {
+  if (!liveAudioCtx) {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) liveAudioCtx = new AudioCtx();
+  }
+  if (liveAudioCtx && liveAudioCtx.state === "suspended") {
+    liveAudioCtx.resume().catch(() => {});
+  }
+  return liveAudioCtx;
+}
+
+function playChime(type) {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    const now = ctx.currentTime;
+    if (type === "start") {
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } else if (type === "send") {
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(1040, now + 0.18);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    } else if (type === "ready") {
+      osc.frequency.setValueAtTime(659, now);
+      osc.frequency.setValueAtTime(880, now + 0.08);
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      osc.start(now);
+      osc.stop(now + 0.16);
+    } else if (type === "interrupt") {
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
+      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    }
+  } catch (_) {}
+}
+
+async function startMicVisualizer() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx || !navigator.mediaDevices?.getUserMedia) return;
+    if (liveMicStream) return;
+
+    liveMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const source = ctx.createMediaStreamSource(liveMicStream);
+    liveAnalyser = ctx.createAnalyser();
+    liveAnalyser.fftSize = 256;
+    source.connect(liveAnalyser);
+
+    const bufferLength = liveAnalyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    function checkEnergy() {
+      if (!isLiveModeActive) return;
+      liveAnalyser.getByteFrequencyData(dataArray);
+      let sum = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        sum += dataArray[i];
+      }
+      const avg = sum / bufferLength;
+      isUserActivelySpeaking = avg > 14;
+
+      // If user is vocalizing, prolong silence timer dynamically
+      if (isUserActivelySpeaking && silenceTimer && isLiveModeActive && liveState === "LISTENING") {
+        clearTimeout(silenceTimer);
+        silenceTimer = setTimeout(() => {
+          if (isLiveModeActive && !isLiveMuted && lastSpokenText && lastSpokenText.trim().length > 0) {
+            dispatchLiveConversation(lastSpokenText.trim());
+          }
+        }, 1200);
+      }
+
+      liveAnimFrame = requestAnimationFrame(checkEnergy);
+    }
+    checkEnergy();
+  } catch (_) {}
+}
+
+function stopMicVisualizer() {
+  if (liveAnimFrame) {
+    cancelAnimationFrame(liveAnimFrame);
+    liveAnimFrame = null;
+  }
+  if (liveMicStream) {
+    liveMicStream.getTracks().forEach((t) => t.stop());
+    liveMicStream = null;
+  }
+}
 
 function setLiveState(state, message = "") {
   liveState = state;

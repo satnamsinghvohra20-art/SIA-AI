@@ -196,9 +196,9 @@ function launchDetached(cmd, args = []) {
   });
 }
 
-function run(cmd, args = []) {
+function run(cmd, args = [], opts = {}) {
   return new Promise((resolve, reject) => {
-    execFile(cmd, args, { timeout: 10_000 }, (err, stdout, stderr) => {
+    execFile(cmd, args, { timeout: 3000, windowsHide: true, ...opts }, (err, stdout, stderr) => {
       if (err) return reject(new Error(stderr?.toString() || err.message));
       resolve(stdout?.toString().trim() || "");
     });
@@ -400,58 +400,21 @@ async function focusExistingWindow(query) {
   if (!raw) return false;
 
   const candidateTitles = SERVICE_TITLE_MAP[raw] || [query];
-
   if (PLATFORM === "win32") {
     const titlesJson = JSON.stringify(candidateTitles);
     const script = `
-Add-Type -TypeDefinition '
-using System;
-using System.Runtime.InteropServices;
-public class WinUtil {
-  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
-  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
-  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
-}';
 $wsh = New-Object -ComObject WScript.Shell;
 $titles = ConvertFrom-Json '${titlesJson.replace(/'/g, "''")}';
-$focused = $false;
-
 foreach ($t in $titles) {
   if ($wsh.AppActivate($t)) {
-    $focused = $true;
     Write-Output "FOCUSED";
-    break;
+    exit 0;
   }
 }
-
-if (-not $focused) {
-  foreach ($t in $titles) {
-    $proc = Get-Process | Where-Object {
-      $_.MainWindowHandle -ne [IntPtr]::Zero -and (
-        ($_.MainWindowTitle -and $_.MainWindowTitle -like "*$t*") -or
-        ($_.ProcessName -like "*$t*")
-      )
-    } | Select-Object -First 1;
-    if ($proc) {
-      if ([WinUtil]::IsIconic($proc.MainWindowHandle)) {
-        [WinUtil]::ShowWindowAsync($proc.MainWindowHandle, 9);
-      } else {
-        [WinUtil]::ShowWindowAsync($proc.MainWindowHandle, 5);
-      }
-      [WinUtil]::SetForegroundWindow($proc.MainWindowHandle);
-      $focused = $true;
-      Write-Output "FOCUSED";
-      break;
-    }
-  }
-}
-
-if (-not $focused) {
-  Write-Output "NOT_FOUND";
-}
+Write-Output "NOT_FOUND";
 `;
-    const res = await run("powershell.exe", ["-NoProfile", "-Command", script.replace(/\r?\n/g, " ")]).catch(() => "NOT_FOUND");
-    return res.includes("FOCUSED");
+    const out = await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script.replace(/\r?\n/g, " ")], { timeout: 2000 }).catch(() => "");
+    return out.includes("FOCUSED");
   } else if (PLATFORM === "darwin") {
     for (const t of candidateTitles) {
       const script = `tell application "${t}" to activate`;
@@ -510,7 +473,7 @@ if ($p) {
   [WinTop]::SetForegroundWindow($p.MainWindowHandle)
 }
 `;
-      await run("powershell.exe", ["-NoProfile", "-Command", psLaunch]).catch(() => {});
+      await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", psLaunch]).catch(() => {});
     }
 
     const waUrl = explicitQuery ? `https://web.whatsapp.com/send?text=${encodeURIComponent(explicitQuery)}` : "https://web.whatsapp.com";
@@ -585,8 +548,18 @@ async function closeApp({ app }) {
   return { closed: app };
 }
 
-async function setVolume({ level }) {
-  const pct = Math.max(0, Math.min(100, Number(level)));
+async function setVolume({ level, mute }) {
+  if (mute === true || mute === false) {
+    if (PLATFORM === "win32") {
+      const script = `try { $wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys([string][char]173) } catch {}`;
+      await launchDetached("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]);
+    } else if (PLATFORM === "darwin") {
+      await run("osascript", ["-e", `set volume ${mute ? "with" : "without"} output muted`]);
+    }
+    return { muted: mute };
+  }
+
+  const pct = Math.max(0, Math.min(100, Number(level !== undefined ? level : 50)));
   if (Number.isNaN(pct)) throw new Error("level must be a number 0-100");
 
   if (PLATFORM === "darwin") {
@@ -605,7 +578,7 @@ try {
   for ($i=0; $i -lt ${upPresses}; $i++) { $wsh.SendKeys([string][char]175) }
 } catch {}
 `;
-    await run("powershell.exe", ["-NoProfile", "-Command", script]).catch(() => {});
+    await launchDetached("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]);
   }
   return { volume: pct, approximate: PLATFORM === "win32" };
 }
@@ -667,7 +640,7 @@ try {
   $bmp.Save('${psPath}', [System.Drawing.Imaging.ImageFormat]::Png)
   $bmp.Dispose()
 }`;
-    await run("powershell.exe", ["-NoProfile", "-Command", script]).catch(() => {});
+    await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]).catch(() => {});
   } else {
     await run("import", ["-window", "root", file]).catch(() => {});
   }

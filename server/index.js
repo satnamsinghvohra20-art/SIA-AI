@@ -107,6 +107,8 @@ app.get("/api/tts/config", (req, res) => {
 // client that can't do cookie-based login). Auth is a header instead of a
 // cookie for this one route, since Siri Shortcuts can't run the login flow.
 // Text in, text out — the caller (Shortcut's "Speak Text" action, or the
+const { tryFastDispatch } = require("./fastDispatcher");
+
 // Android app's own TTS) is responsible for the actual audio.
 app.post("/api/voice-command", chatLimiter, async (req, res) => {
   if (!auth.checkPassword(req.headers["x-sia-password"])) {
@@ -119,16 +121,35 @@ app.post("/api/voice-command", chatLimiter, async (req, res) => {
   }
 
   const sid = sessionId || process.env.VOICE_SESSION_ID || "voice-loop";
-  const DEVICE_VERBS = [
-    "open", "close", "click", "tap", "swipe", "type", "send", "call", "message",
-    "whatsapp", "instagram", "screenshot", "volume", "shutdown", "restart",
-    "sleep", "scroll", "press", "delete", "move", "read screen", "run",
-    "browse", "search", "youtube", "spotify", "edge", "chrome", "website",
-    "web", "url", "play", "pause", "launch", "google", "find", "mute",
-  ];
-  const isDeviceCommand = !forceModel && DEVICE_VERBS.some((v) => text.toLowerCase().includes(v));
 
   try {
+    // 1. Fast-Path Direct Dispatch (<50ms execution)
+    if (!forceModel) {
+      const fastResult = await tryFastDispatch(text);
+      if (fastResult.matched) {
+        await brain.appendMessage(sid, "user", text);
+        await brain.appendMessage(sid, "assistant", fastResult.answer);
+        return res.json({
+          reply: fastResult.answer,
+          steps: fastResult.steps,
+          routing: {
+            category: "fast_dispatch",
+            modelLabel: "⚡ Instant Dispatcher (<50ms)",
+            why: "Direct deterministic command executed instantly without network latency.",
+          },
+        });
+      }
+    }
+
+    const DEVICE_VERBS = [
+      "open", "close", "click", "tap", "swipe", "type", "send", "call", "message",
+      "whatsapp", "instagram", "screenshot", "volume", "shutdown", "restart",
+      "sleep", "scroll", "press", "delete", "move", "read screen", "run",
+      "browse", "search", "youtube", "spotify", "edge", "chrome", "website",
+      "web", "url", "play", "pause", "launch", "google", "find", "mute",
+    ];
+    const isDeviceCommand = !forceModel && DEVICE_VERBS.some((v) => text.toLowerCase().includes(v));
+
     if (isDeviceCommand) {
       const snapshot = await deviceAgent.startTask({ sessionId: sid, instruction: text });
       return res.json({ reply: snapshot.finalAnswer || "Done.", steps: snapshot.log, taskId: snapshot.taskId });
@@ -160,6 +181,26 @@ app.post("/api/chat", chatLimiter, async (req, res) => {
   const sessionId = req.sessionId;
 
   try {
+    // 1. Fast-Path Direct Dispatch (<50ms execution)
+    if (!forceModel && (!forceCategory || forceCategory === "auto" || forceCategory === "auto_300")) {
+      const fastResult = await tryFastDispatch(message);
+      if (fastResult.matched) {
+        await brain.appendMessage(sessionId, "user", message);
+        await brain.appendMessage(sessionId, "assistant", fastResult.answer);
+        return res.json({
+          answer: fastResult.answer,
+          routing: {
+            category: "device_control",
+            classifiedBy: "fast_dispatcher",
+            model: "direct-dispatch",
+            modelLabel: "⚡ Instant Dispatcher (<50ms)",
+            why: "Direct deterministic command executed instantly without network latency.",
+          },
+          steps: fastResult.steps,
+        });
+      }
+    }
+
     const persistedHistory = brain.getContextForModel(sessionId);
     const autoClassification = await classify(message);
     const isDevice = autoClassification.category === "device_control";

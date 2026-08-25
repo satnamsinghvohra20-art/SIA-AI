@@ -2,28 +2,42 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 const FALLBACK_MODELS = [
   "openai/gpt-4o-mini",
-  "openrouter/free",
-  "google/gemma-4-31b-it:free",
-  "google/gemma-4-26b-a4b-it:free",
-  "nvidia/nemotron-3.5-lightning:free",
   "meta-llama/llama-3.3-70b-instruct",
   "deepseek/deepseek-chat",
+  "google/gemini-2.0-flash-001",
+  "qwen/qwen-2.5-72b-instruct",
 ];
 
 const FALLBACK_TOOL_MODELS = [
   "openai/gpt-4o-mini",
-  "openrouter/free",
-  "google/gemma-4-31b-it:free",
-  "google/gemma-4-26b-a4b-it:free",
-  "nvidia/nemotron-3.5-lightning:free",
   "meta-llama/llama-3.3-70b-instruct",
   "deepseek/deepseek-chat",
+  "google/gemini-2.0-flash-001",
 ];
+
+// In-memory cache for quarantined / broken models (30 min TTL)
+const deadModelCache = new Map(); // modelName -> timestamp of expiration
+const QUARANTINE_DURATION_MS = 30 * 60 * 1000;
+
+function isModelQuarantined(model) {
+  const expiresAt = deadModelCache.get(model);
+  if (!expiresAt) return false;
+  if (Date.now() > expiresAt) {
+    deadModelCache.delete(model);
+    return false;
+  }
+  return true;
+}
+
+function quarantineModel(model, reason) {
+  console.warn(`[OpenRouter Health] Quarantining broken model "${model}" for 30m. Reason: ${reason}`);
+  deadModelCache.set(model, Date.now() + QUARANTINE_DURATION_MS);
+}
 
 /**
  * Executes a fetch with an AbortSignal timeout.
  */
-async function fetchWithTimeout(url, options, timeoutMs = 20000) {
+async function fetchWithTimeout(url, options, timeoutMs = 8000) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -38,17 +52,17 @@ async function fetchWithTimeout(url, options, timeoutMs = 20000) {
 
 /**
  * Thin wrapper around OpenRouter unified chat completions endpoint
- * with automatic zero-downtime failover if a primary model is unavailable.
+ * with smart health caching & zero-downtime sub-second failover.
  */
 async function callOpenRouter({ model, messages, max_tokens = 700, temperature = 0.7 }) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    throw new Error(
-      "Missing OPENROUTER_API_KEY. Add it to your .env file."
-    );
+    throw new Error("Missing OPENROUTER_API_KEY. Add it to your .env file.");
   }
 
-  const modelsToTry = [model, ...FALLBACK_MODELS.filter((m) => m !== model)];
+  const candidatePool = [model, ...FALLBACK_MODELS.filter((m) => m !== model)];
+  const activeCandidates = candidatePool.filter((m) => !isModelQuarantined(m));
+  const modelsToTry = activeCandidates.length > 0 ? activeCandidates : candidatePool;
   let lastError = null;
 
   for (const currentModel of modelsToTry) {
@@ -70,11 +84,14 @@ async function callOpenRouter({ model, messages, max_tokens = 700, temperature =
             temperature,
           }),
         },
-        18000
+        8000
       );
 
       if (!response.ok) {
         const errText = await response.text().catch(() => "");
+        if (response.status === 402 || response.status === 404 || response.status === 400) {
+          quarantineModel(currentModel, `${response.status}: ${errText.slice(0, 100)}`);
+        }
         throw new Error(`Model ${currentModel} returned ${response.status}: ${errText.slice(0, 200)}`);
       }
 
@@ -95,17 +112,17 @@ async function callOpenRouter({ model, messages, max_tokens = 700, temperature =
 }
 
 /**
- * Tool-calling flow for device control with automatic tool-capable model failover.
+ * Tool-calling flow for device control with smart health caching & rapid failover.
  */
 async function callOpenRouterWithTools({ model, messages, tools, max_tokens = 800, temperature = 0.2 }) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    throw new Error(
-      "Missing OPENROUTER_API_KEY. Add it to your .env file."
-    );
+    throw new Error("Missing OPENROUTER_API_KEY. Add it to your .env file.");
   }
 
-  const modelsToTry = [model, ...FALLBACK_TOOL_MODELS.filter((m) => m !== model)];
+  const candidatePool = [model, ...FALLBACK_TOOL_MODELS.filter((m) => m !== model)];
+  const activeCandidates = candidatePool.filter((m) => !isModelQuarantined(m));
+  const modelsToTry = activeCandidates.length > 0 ? activeCandidates : candidatePool;
   let lastError = null;
 
   for (const currentModel of modelsToTry) {
@@ -128,11 +145,14 @@ async function callOpenRouterWithTools({ model, messages, tools, max_tokens = 80
             temperature,
           }),
         },
-        22000
+        9000
       );
 
       if (!response.ok) {
         const errText = await response.text().catch(() => "");
+        if (response.status === 402 || response.status === 404 || response.status === 400) {
+          quarantineModel(currentModel, `${response.status}: ${errText.slice(0, 100)}`);
+        }
         throw new Error(`Tool Model ${currentModel} returned ${response.status}: ${errText.slice(0, 200)}`);
       }
 

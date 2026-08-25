@@ -213,21 +213,36 @@ function markStepDone(sessionId, index) {
 }
 
 /**
- * Appends one chat turn to recent_messages. If the window exceeds
+ * Appends one chat turn to recent_messages immediately. If the window exceeds
  * RECENT_MESSAGE_LIMIT, the oldest overflow is folded into chat_summary
- * via a cheap model call rather than being dropped.
+ * in the background (asynchronously) without blocking the response turn.
  */
 async function appendMessage(sessionId, role, content) {
   const state = readState(sessionId);
   state.recent_messages.push({ role, content, at: new Date().toISOString() });
 
+  let overflow = null;
   if (state.recent_messages.length > RECENT_MESSAGE_LIMIT) {
     const overflowCount = state.recent_messages.length - RECENT_MESSAGE_LIMIT;
-    const overflow = state.recent_messages.splice(0, overflowCount);
-    state.chat_summary = await foldIntoSummary(state.chat_summary, overflow);
+    overflow = state.recent_messages.splice(0, overflowCount);
   }
 
-  return writeState(sessionId, state);
+  writeState(sessionId, state);
+
+  // Trigger background summarization asynchronously without blocking the user turn
+  if (overflow && overflow.length > 0) {
+    setImmediate(async () => {
+      try {
+        const freshState = readState(sessionId);
+        freshState.chat_summary = await foldIntoSummary(freshState.chat_summary, overflow);
+        writeState(sessionId, freshState);
+      } catch (err) {
+        console.error("Async brain summarization error:", err.message);
+      }
+    });
+  }
+
+  return state;
 }
 
 /**
