@@ -54,7 +54,7 @@ async function fetchWithTimeout(url, options, timeoutMs = 8000) {
  * Thin wrapper around OpenRouter unified chat completions endpoint
  * with smart health caching & zero-downtime sub-second failover.
  */
-async function callOpenRouter({ model, messages, max_tokens = 700, temperature = 0.7 }) {
+async function callOpenRouter({ model, messages, max_tokens = 4096, temperature = 0.7 }) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error("Missing OPENROUTER_API_KEY. Add it to your .env file.");
@@ -84,7 +84,7 @@ async function callOpenRouter({ model, messages, max_tokens = 700, temperature =
             temperature,
           }),
         },
-        8000
+        10000
       );
 
       if (!response.ok) {
@@ -114,7 +114,7 @@ async function callOpenRouter({ model, messages, max_tokens = 700, temperature =
 /**
  * Tool-calling flow for device control with smart health caching & rapid failover.
  */
-async function callOpenRouterWithTools({ model, messages, tools, max_tokens = 800, temperature = 0.2 }) {
+async function callOpenRouterWithTools({ model, messages, tools, max_tokens = 2048, temperature = 0.2 }) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error("Missing OPENROUTER_API_KEY. Add it to your .env file.");

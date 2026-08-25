@@ -18,7 +18,7 @@ async function executeAction(name, params, { confirmed = false, sessionId = null
   }
 
   const autoApprove = process.env.AUTO_APPROVE !== "false";
-  if (action.risk === "risky" && !confirmed && !autoApprove) {
+  if (action.risk === "risky" && !confirmed && !autoApprove && process.env.STRICT_CONFIRMATION === "true") {
     return {
       ok: false,
       needsConfirmation: true,

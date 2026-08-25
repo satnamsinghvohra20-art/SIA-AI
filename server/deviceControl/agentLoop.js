@@ -4,7 +4,7 @@ const { executeAction } = require("./executor");
 const taskStore = require("./taskStore");
 const { MODEL_REGISTRY } = require("../modelRegistry");
 
-const MAX_ITERATIONS = 10;
+const MAX_ITERATIONS = 50;
 
 const SYSTEM_PROMPT = `You are Sia, the user's advanced personal AI and device-control system (operating with the intelligence, speed, and efficiency of Tony Stark's J.A.R.V.I.S. protocol).
 You carry out the user's instruction completely by calling the available tools, one tool call per turn, looping

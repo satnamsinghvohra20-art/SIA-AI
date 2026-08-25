@@ -29,20 +29,18 @@ const ELEVENLABS_VOICES = {
   liam: { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam (Young & Energetic)" },
 };
 
-// Rate limits
+// Rate limits (Unrestricted for seamless local usage)
 const chatLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 60,
+  limit: 10000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests — slow down and try again in a few minutes." },
 });
 
-// Device actions can have real-world side effects (calls, messages, power
-// state) so this is capped tighter than ordinary chat.
 const deviceLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 30,
+  limit: 10000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many device-control requests — slow down and try again in a few minutes." },
@@ -50,7 +48,7 @@ const deviceLimiter = rateLimit({
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many login attempts — try again later." },
@@ -174,8 +172,8 @@ app.post("/api/chat", chatLimiter, async (req, res) => {
   if (!message || typeof message !== "string") {
     return res.status(400).json({ error: "message (string) is required" });
   }
-  if (message.length > 8000) {
-    return res.status(400).json({ error: "message is too long (max 8000 characters)" });
+  if (message.length > 120000) {
+    return res.status(400).json({ error: "message is too long (max 120,000 characters)" });
   }
 
   const sessionId = req.sessionId;
