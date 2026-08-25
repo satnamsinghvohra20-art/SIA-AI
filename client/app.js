@@ -917,7 +917,7 @@ if (SpeechRecognition) {
             stopListening();
             composer.dispatchEvent(new Event("submit", { cancelable: true }));
           }
-        }, 1200);
+        }, 1500);
       }
     }
   };
@@ -1069,12 +1069,12 @@ function handleLiveSpeechResult(text) {
     clearTimeout(silenceTimer);
   }
 
-  // Direct Voice Talking: automatically sends as soon as you finish speaking (420ms natural pause)
+  // Listens carefully to your FULL command without interrupting (1500ms natural pause buffer)
   silenceTimer = setTimeout(() => {
     if (isLiveModeActive && !isLiveMuted && text.trim().length > 0) {
       dispatchLiveConversation(text.trim());
     }
-  }, 420);
+  }, 1500);
 }
 
 function cleanWakePrefix(raw) {

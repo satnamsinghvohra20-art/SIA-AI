@@ -13,7 +13,7 @@ function launchDetached(cmd, args = []) {
         windowsHide: true,
       });
       child.unref();
-      setTimeout(resolve, 200);
+      setTimeout(resolve, 60);
     } catch (_) {
       resolve();
     }
@@ -56,7 +56,7 @@ async function typeText({ text }) {
 
   if (PLATFORM === "win32") {
     const b64 = Buffer.from(text, "utf8").toString("base64");
-    const script = `Add-Type -AssemblyName System.Windows.Forms; $bytes = [Convert]::FromBase64String('${b64}'); $decoded = [System.Text.Encoding]::UTF8.GetString($bytes); Set-Clipboard -Value $decoded; Start-Sleep -Milliseconds 150; [System.Windows.Forms.SendKeys]::SendWait('^v');`;
+    const script = `Add-Type -AssemblyName System.Windows.Forms; $bytes = [Convert]::FromBase64String('${b64}'); $decoded = [System.Text.Encoding]::UTF8.GetString($bytes); Set-Clipboard -Value $decoded; Start-Sleep -Milliseconds 60; [System.Windows.Forms.SendKeys]::SendWait('^v');`;
     await launchDetached("powershell.exe", ["-Sta", "-NoProfile", "-Command", script]);
   } else if (PLATFORM === "darwin") {
     const escaped = text.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
