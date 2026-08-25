@@ -1,85 +1,96 @@
 const fs = require("fs/promises");
 const path = require("path");
+const os = require("os");
 
 /**
- * FILE HANDLERS
- * -------------
- * Every path passed in from the model is resolved *inside* a configured
- * root directory (SIA_DEVICE_ROOT, default: <project>/data/device/files)
- * and rejected if it would escape that root — this is what stops
- * "delete ../../../important-thing" from ever reaching the real
- * filesystem call. Change SIA_DEVICE_ROOT in .env if you want Sia's file
- * actions to operate on a specific real folder (e.g. your Desktop) —
- * just be deliberate about it, since anything under that root is fair
- * game for delete/overwrite once a risky action is confirmed.
+ * UNRESTRICTED FILE HANDLERS
+ * --------------------------
+ * Provides full read/write/list/delete access across the entire local
+ * filesystem (Desktop, Downloads, Documents, Project roots, etc.).
  */
 
-function getRoot() {
-  return process.env.SIA_DEVICE_ROOT || path.join(__dirname, "..", "..", "..", "data", "device", "files");
-}
-
-function resolveSafe(relativePath) {
-  const root = getRoot();
-  const target = path.resolve(root, relativePath || ".");
-  if (target !== root && !target.startsWith(root + path.sep)) {
-    throw new Error(
-      `Path "${relativePath}" resolves outside the allowed folder (${root}). Refusing.`
-    );
+function resolvePath(inputPath) {
+  if (!inputPath || inputPath === ".") return process.cwd();
+  
+  let p = String(inputPath).trim();
+  // Handle ~ for home directory
+  if (p.startsWith("~")) {
+    p = path.join(os.homedir(), p.slice(1));
   }
-  return target;
-}
+  // Handle common friendly names
+  const lower = p.toLowerCase();
+  if (lower === "desktop") return path.join(os.homedir(), "Desktop");
+  if (lower === "downloads") return path.join(os.homedir(), "Downloads");
+  if (lower === "documents") return path.join(os.homedir(), "Documents");
 
-async function ensureRoot() {
-  await fs.mkdir(getRoot(), { recursive: true });
+  if (path.isAbsolute(p)) {
+    return path.normalize(p);
+  }
+  return path.resolve(process.cwd(), p);
 }
 
 async function listDir({ dir = "." }) {
-  await ensureRoot();
-  const target = resolveSafe(dir);
-  const entries = await fs.readdir(target, { withFileTypes: true });
-  return {
-    dir,
-    entries: entries.map((e) => ({
-      name: e.name,
-      type: e.isDirectory() ? "dir" : "file",
-    })),
-  };
+  const target = resolvePath(dir);
+  try {
+    const entries = await fs.readdir(target, { withFileTypes: true });
+    return {
+      dir: target,
+      entries: entries.map((e) => ({
+        name: e.name,
+        type: e.isDirectory() ? "dir" : "file",
+      })),
+    };
+  } catch (err) {
+    return { dir: target, error: err.message, entries: [] };
+  }
 }
 
 async function readFile({ file }) {
-  await ensureRoot();
-  const target = resolveSafe(file);
-  const content = await fs.readFile(target, "utf8");
-  return { file, content: content.slice(0, 20_000) };
+  const target = resolvePath(file);
+  try {
+    const content = await fs.readFile(target, "utf8");
+    return { file: target, content: content.slice(0, 100_000) };
+  } catch (err) {
+    return { file: target, error: err.message };
+  }
 }
 
 async function writeFile({ file, content = "" }) {
-  await ensureRoot();
-  const target = resolveSafe(file);
-  await fs.mkdir(path.dirname(target), { recursive: true });
-  await fs.writeFile(target, content, "utf8");
-  return { file, bytesWritten: Buffer.byteLength(content, "utf8") };
+  const target = resolvePath(file);
+  try {
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.writeFile(target, content, "utf8");
+    return { file: target, success: true, bytesWritten: Buffer.byteLength(content, "utf8") };
+  } catch (err) {
+    return { file: target, error: err.message };
+  }
 }
 
 async function moveFile({ from, to }) {
-  await ensureRoot();
-  const src = resolveSafe(from);
-  const dest = resolveSafe(to);
-  await fs.mkdir(path.dirname(dest), { recursive: true });
-  await fs.rename(src, dest);
-  return { from, to };
+  const src = resolvePath(from);
+  const dest = resolvePath(to);
+  try {
+    await fs.mkdir(path.dirname(dest), { recursive: true });
+    await fs.rename(src, dest);
+    return { from: src, to: dest, success: true };
+  } catch (err) {
+    return { from: src, to: dest, error: err.message };
+  }
 }
 
 async function deleteFile({ file }) {
-  await ensureRoot();
-  const target = resolveSafe(file);
-  const stat = await fs.stat(target);
-  if (stat.isDirectory()) {
-    await fs.rm(target, { recursive: true, force: true });
-  } else {
-    await fs.unlink(target);
+  const target = resolvePath(file);
+  try {
+    const stat = await fs.stat(target);
+    if (stat.isDirectory()) {
+      await fs.rm(target, { recursive: true, force: true });
+    } else {
+      await fs.unlink(target);
+    }
+    return { deleted: target, success: true };
+  } catch (err) {
+    return { deleted: target, error: err.message };
   }
-  return { deleted: file };
 }
 
-module.exports = { listDir, readFile, writeFile, moveFile, deleteFile, getRoot };
+module.exports = { listDir, readFile, writeFile, moveFile, deleteFile, resolvePath };

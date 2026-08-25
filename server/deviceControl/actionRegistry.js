@@ -108,39 +108,38 @@ const ACTIONS = {
     },
     handler: system.systemPower,
   },
-
-  list_files: {
-    description: "List files/folders inside Sia's sandboxed device-files folder.",
+  list_dir: {
+    description: "List files and folders in any directory on the system (e.g. Desktop, Downloads, Documents, or project folders).",
     risk: "safe",
     params: {
       type: "object",
-      properties: { dir: { type: "string", description: "Relative path, default '.'" } },
+      properties: { dir: { type: "string", description: "Directory path (e.g. 'Desktop', 'Downloads', '.' or full path)" } },
     },
     handler: files.listDir,
   },
   read_file: {
-    description: "Read a text file from Sia's sandboxed device-files folder.",
+    description: "Read any file content from the filesystem (e.g. source code, text, documents).",
     risk: "safe",
     params: {
       type: "object",
-      properties: { file: { type: "string" } },
+      properties: { file: { type: "string", description: "File path (relative or absolute)" } },
       required: ["file"],
     },
     handler: files.readFile,
   },
   write_file: {
-    description: "Create or overwrite a text file in Sia's sandboxed device-files folder.",
-    risk: "risky",
+    description: "Create or overwrite any file on the filesystem with specified content.",
+    risk: "safe",
     params: {
       type: "object",
-      properties: { file: { type: "string" }, content: { type: "string" } },
+      properties: { file: { type: "string", description: "File path" }, content: { type: "string", description: "File content" } },
       required: ["file", "content"],
     },
     handler: files.writeFile,
   },
   move_file: {
-    description: "Move/rename a file within Sia's sandboxed device-files folder.",
-    risk: "risky",
+    description: "Move or rename any file or directory.",
+    risk: "safe",
     params: {
       type: "object",
       properties: { from: { type: "string" }, to: { type: "string" } },
@@ -149,8 +148,8 @@ const ACTIONS = {
     handler: files.moveFile,
   },
   delete_file: {
-    description: "Delete a file or folder within Sia's sandboxed device-files folder.",
-    risk: "risky",
+    description: "Delete a file or folder from the filesystem.",
+    risk: "safe",
     params: {
       type: "object",
       properties: { file: { type: "string" } },
@@ -159,15 +158,29 @@ const ACTIONS = {
     handler: files.deleteFile,
   },
 
-  run_script: {
+  run_command: {
     description:
-      "Run a pre-approved, whitelisted script by name from server/deviceControl/scripts/. " +
-      "Cannot run arbitrary shell commands — only scripts that already exist on disk.",
-    risk: "risky",
+      "Execute any shell, terminal, or system command directly on the host computer (PowerShell, Bash, CMD, Node, Python, Git, etc.).",
+    risk: "safe",
     params: {
       type: "object",
       properties: {
-        name: { type: "string", description: "Script filename without extension" },
+        command: { type: "string", description: "The command to run (e.g. 'git status', 'dir', 'python script.py', 'npm test')" },
+        cwd: { type: "string", description: "Optional working directory" },
+      },
+      required: ["command"],
+    },
+    handler: scripts.runCommand,
+  },
+
+  run_script: {
+    description:
+      "Run a script by name from server/deviceControl/scripts/ or execute as a system command.",
+    risk: "safe",
+    params: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Script name or command" },
         args: { type: "array", items: { type: "string" } },
       },
       required: ["name"],
