@@ -7,14 +7,22 @@ const { route } = require("./router");
 const { classify } = require("./classifier");
 const { MODEL_REGISTRY } = require("./modelRegistry");
 const brain = require("./memory/brainStore");
+const knowledgeGraph = require("./memory/knowledgeGraph");
 const { sessionMiddleware } = require("./session");
 const auth = require("./auth");
 const deviceAgent = require("./deviceControl/agentLoop");
 const { ACTIONS } = require("./deviceControl/actionRegistry");
 const mobileBridge = require("./deviceControl/mobileBridge");
+const { streamOpenRouterCompletion } = require("./openrouterClient");
+const { runCouncilConsensus } = require("./consensusEngine");
+const { processUploadedFile, formatMultimodalMessage } = require("./fileHandler");
+const mcpClient = require("./plugins/mcpClient");
+const siaIdentity = require("./siaIdentity");
+const { getModelByIdSync, matchBestModelFrom300, getAllModels } = require("./modelsCatalog");
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "..", "client")));
 
@@ -101,10 +109,6 @@ app.get("/api/tts/config", (req, res) => {
   });
 });
 
-// Voice-command bridge (used by the iOS Shortcut and any other headless
-// client that can't do cookie-based login). Auth is a header instead of a
-// cookie for this one route, since Siri Shortcuts can't run the login flow.
-// Text in, text out — the caller (Shortcut's "Speak Text" action, or the
 const { tryFastDispatch } = require("./fastDispatcher");
 
 // Android app's own TTS) is responsible for the actual audio.
@@ -166,7 +170,253 @@ app.post("/api/voice-command", chatLimiter, async (req, res) => {
 // Protected Endpoints (Requires auth cookie if SIA_PASSWORD is set)
 app.use("/api", auth.requireAuth);
 
-// Main chat endpoint
+// --- Real-Time SSE Token & Reasoning Streaming Endpoint ---
+app.post("/api/chat/stream", chatLimiter, async (req, res) => {
+  const { message, files = [], forceCategory, forceModel } = req.body || {};
+  if (!message && (!files || files.length === 0)) {
+    return res.status(400).json({ error: "message or attached file is required" });
+  }
+
+  const sessionId = req.sessionId;
+  const userText = message || "(analyzing attached file)";
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  const sendEvent = (event, data) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    // 1. Fast-Path Direct Dispatch (<50ms execution)
+    if (!forceModel && files.length === 0 && (!forceCategory || forceCategory === "auto" || forceCategory === "auto_300")) {
+      const fastResult = await tryFastDispatch(userText);
+      if (fastResult.matched) {
+        await brain.appendMessage(sessionId, "user", userText);
+        await brain.appendMessage(sessionId, "assistant", fastResult.answer);
+
+        sendEvent("routing", {
+          category: "device_control",
+          classifiedBy: "fast_dispatcher",
+          model: "direct-dispatch",
+          modelLabel: "⚡ Instant Dispatcher (<50ms)",
+          why: "Direct deterministic command executed instantly without network latency.",
+        });
+        sendEvent("token", { content: fastResult.answer });
+        sendEvent("steps", { steps: fastResult.steps });
+        sendEvent("done", { ok: true, answer: fastResult.answer });
+        return res.end();
+      }
+    }
+
+    // 2. Resolve Model and Category
+    let targetModel = null;
+    let modelLabel = null;
+    let categoryName = "general";
+    let classifiedBy = "300_model_matcher";
+    let why = "Auto-selected #1 AI model among 300+ models";
+
+    const hasImages = files.some((f) => f.kind === "image");
+
+    if (forceModel) {
+      targetModel = forceModel;
+      const catEntry = getModelByIdSync(forceModel);
+      modelLabel = catEntry ? catEntry.name : forceModel;
+      categoryName = catEntry?.category || "custom";
+      classifiedBy = "user_override";
+      why = `Manually selected model: ${modelLabel}`;
+    } else if (hasImages) {
+      targetModel = "google/gemini-2.0-flash-001";
+      modelLabel = "Gemini 2.0 Flash (Multimodal Vision)";
+      categoryName = "vision";
+      classifiedBy = "multimodal_detector";
+      why = "Attached image routed to Google Gemini 2.0 Flash for vision analysis.";
+    } else if (forceCategory && MODEL_REGISTRY[forceCategory]) {
+      const entry = MODEL_REGISTRY[forceCategory];
+      targetModel = entry.model;
+      modelLabel = entry.label;
+      categoryName = forceCategory;
+      classifiedBy = "category_override";
+      why = entry.why;
+    } else {
+      const classification = await classify(userText);
+      if (classification.category === "device_control") {
+        // Device control execution
+        sendEvent("routing", {
+          category: "device_control",
+          classifiedBy: classification.method,
+          model: MODEL_REGISTRY.device_control.model,
+          modelLabel: `${MODEL_REGISTRY.device_control.label} (device agent)`,
+          why: "Instruction required real system/app actions — executing agent tool loop.",
+        });
+
+        const snapshot = await deviceAgent.startTask({
+          sessionId,
+          instruction: userText,
+          onStep: (entry) => {
+            sendEvent("agent_step", entry);
+          },
+        });
+
+        await brain.appendMessage(sessionId, "user", userText);
+        await brain.appendMessage(sessionId, "assistant", snapshot.finalAnswer || "Done.");
+
+        sendEvent("token", { content: snapshot.finalAnswer || "Done." });
+        sendEvent("steps", { steps: snapshot.log, taskId: snapshot.taskId });
+        sendEvent("done", { ok: true, answer: snapshot.finalAnswer || "Done." });
+        return res.end();
+      }
+
+      const bestMatch = matchBestModelFrom300(userText);
+      targetModel = bestMatch.model;
+      modelLabel = bestMatch.modelLabel;
+      categoryName = bestMatch.category;
+      classifiedBy = "300_model_matcher";
+      why = bestMatch.why;
+    }
+
+    sendEvent("routing", {
+      category: categoryName,
+      classifiedBy,
+      model: targetModel,
+      modelLabel,
+      why,
+    });
+
+    const persistedHistory = brain.getContextForModel(sessionId);
+    const multimodalUserContent = formatMultimodalMessage(userText, files);
+
+    const messages = [
+      { role: "system", content: siaIdentity.systemPrompt() },
+      ...persistedHistory,
+      { role: "user", content: multimodalUserContent },
+    ];
+
+    const streamResult = await streamOpenRouterCompletion({
+      model: targetModel,
+      messages,
+      onChunk: ({ content, reasoning, done, model }) => {
+        if (reasoning) {
+          sendEvent("reasoning", { text: reasoning });
+        }
+        if (content) {
+          sendEvent("token", { content });
+        }
+        if (done) {
+          sendEvent("stream_done", { model });
+        }
+      },
+    });
+
+    await brain.appendMessage(sessionId, "user", userText);
+    await brain.appendMessage(sessionId, "assistant", streamResult.content);
+
+    sendEvent("done", {
+      ok: true,
+      answer: streamResult.content,
+      reasoning: streamResult.reasoning,
+    });
+    res.end();
+  } catch (err) {
+    console.error("[SSE Stream Error]:", err);
+    sendEvent("error", { error: err.message || "Streaming failed." });
+    res.end();
+  }
+});
+
+// --- Council of AI Consensus Endpoint ---
+app.post("/api/chat/consensus", chatLimiter, async (req, res) => {
+  const { message } = req.body || {};
+  if (!message || typeof message !== "string") {
+    return res.status(400).json({ error: "message (string) is required" });
+  }
+
+  const sessionId = req.sessionId;
+
+  try {
+    const persistedHistory = brain.getContextForModel(sessionId);
+    const result = await runCouncilConsensus({ message, history: persistedHistory });
+
+    await brain.appendMessage(sessionId, "user", `[Council Consensus Request] ${message}`);
+    await brain.appendMessage(sessionId, "assistant", result.masterAnswer);
+
+    res.json({
+      ok: true,
+      answer: result.masterAnswer,
+      perspectives: result.perspectives,
+      consensusCount: result.consensusCount,
+      routing: {
+        category: "consensus",
+        modelLabel: "🏛️ Council of 3 Flagship Models",
+        why: "Multi-model deliberation across Claude 3.5 Sonnet, DeepSeek R1, and GPT-4o.",
+      },
+    });
+  } catch (err) {
+    console.error("[Council Consensus Error]:", err);
+    res.status(500).json({ error: err.message || "Consensus deliberation failed." });
+  }
+});
+
+// --- Multimodal File Processing Endpoint ---
+app.post("/api/files/process", (req, res) => {
+  const { name, type, dataUrl, textContent } = req.body || {};
+  if (!name) {
+    return res.status(400).json({ error: "File name is required" });
+  }
+
+  try {
+    const processed = processUploadedFile({ name, type, dataUrl, textContent });
+    res.json({ ok: true, file: processed });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Knowledge Graph Memory Endpoints ---
+app.get("/api/memory/knowledge", (req, res) => {
+  const knowledge = knowledgeGraph.readKnowledge(req.sessionId);
+  res.json({ ok: true, knowledge });
+});
+
+app.post("/api/memory/knowledge", (req, res) => {
+  const { category, key, value } = req.body || {};
+  if (!value) {
+    return res.status(400).json({ error: "value is required" });
+  }
+  const updated = knowledgeGraph.addFact(req.sessionId, category, key, value);
+  res.json({ ok: true, knowledge: updated });
+});
+
+app.delete("/api/memory/knowledge/:factId", (req, res) => {
+  const updated = knowledgeGraph.deleteFact(req.sessionId, req.params.factId);
+  res.json({ ok: true, knowledge: updated });
+});
+
+// --- MCP Server Management Endpoints ---
+app.get("/api/mcp/servers", (req, res) => {
+  const config = mcpClient.getMcpConfig();
+  const activeTools = mcpClient.getActiveTools();
+  res.json({ ok: true, servers: config.servers || [], activeTools });
+});
+
+app.post("/api/mcp/servers", (req, res) => {
+  const { server } = req.body || {};
+  if (!server || !server.name) {
+    return res.status(400).json({ error: "Valid server object is required" });
+  }
+  const config = mcpClient.getMcpConfig();
+  const existingIndex = config.servers.findIndex((s) => s.name === server.name);
+  if (existingIndex >= 0) {
+    config.servers[existingIndex] = { ...config.servers[existingIndex], ...server };
+  } else {
+    config.servers.push(server);
+  }
+  mcpClient.saveMcpConfig(config);
+  res.json({ ok: true, config });
+});
+
+// Main chat endpoint (Legacy REST fallback)
 app.post("/api/chat", chatLimiter, async (req, res) => {
   const { message, forceCategory, forceModel } = req.body || {};
   if (!message || typeof message !== "string") {

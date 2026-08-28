@@ -1,0 +1,25 @@
+{
+  "current_task": {
+    "id": null,
+    "goal": null,
+    "status": "idle",
+    "started_at": null
+  },
+  "plan": [],
+  "decisions_log": [],
+  "chat_summary": "",
+  "recent_messages": [
+    {
+      "role": "user",
+      "content": "Write 1 short sentence confirming you are online.",
+      "at": "2026-08-28T18:42:11.502Z"
+    },
+    {
+      "role": "assistant",
+      "content": "I am online and ready to assist you, sir.",
+      "at": "2026-08-28T18:42:11.508Z"
+    }
+  ],
+  "blockers": [],
+  "last_updated": "2026-08-28T18:42:11.508Z"
+}

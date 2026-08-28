@@ -1299,4 +1299,360 @@ body {
   cursor: default;
 }
 
-/* =====================================================
+/* ============================================================
+   Brand Badge & Header Action Buttons
+   ============================================================ */
+.brand-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: rgba(94, 224, 200, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(94, 224, 200, 0.3);
+  padding: 2px 7px;
+  border-radius: 999px;
+  margin-left: 6px;
+}
+
+.consensus-orb-glow {
+  background: #a78bfa !important;
+  box-shadow: 0 0 10px #a78bfa !important;
+}
+
+.memory-orb-glow {
+  background: #38bdf8 !important;
+  box-shadow: 0 0 10px #38bdf8 !important;
+}
+
+.empty-hero-orb {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #5ee0c8 10%, #3b82f6 60%, transparent 80%);
+  margin: 0 auto 16px;
+  filter: blur(4px);
+  animation: heroOrbPulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes heroOrbPulse {
+  0% { transform: scale(0.9); opacity: 0.6; }
+  100% { transform: scale(1.15); opacity: 1; filter: blur(6px); }
+}
+
+/* ============================================================
+   Composer Container & File Attachment Bar
+   ============================================================ */
+.composer-container {
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  position: relative;
+  z-index: 10;
+}
+
+.file-preview-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px 2px;
+  background: rgba(18, 20, 26, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: var(--mono);
+  color: var(--text);
+  animation: fadeInChip 0.15s ease-out;
+}
+
+@keyframes fadeInChip {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.file-chip-thumb {
+  width: 20px;
+  height: 20px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.file-chip-remove {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.file-chip-remove:hover {
+  color: #ff5c7c;
+}
+
+.composer-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.composer-icon-btn:hover {
+  color: var(--accent);
+  background: rgba(94, 224, 200, 0.1);
+}
+
+/* Drop Zone Overlay */
+.drop-zone-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 11, 15, 0.88);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.drop-zone-box {
+  border: 2px dashed var(--accent);
+  border-radius: 16px;
+  padding: 40px 60px;
+  text-align: center;
+  color: var(--accent);
+  background: rgba(94, 224, 200, 0.05);
+}
+
+.drop-zone-box p {
+  margin-top: 12px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* ============================================================
+   Streaming Cursor & Real-time Reasoning Accordion
+   ============================================================ */
+.streaming-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  background: var(--accent);
+  vertical-align: middle;
+  margin-left: 3px;
+  animation: streamBlink 0.7s infinite alternate;
+}
+
+@keyframes streamBlink {
+  0% { opacity: 0.2; }
+  100% { opacity: 1; box-shadow: 0 0 8px var(--accent); }
+}
+
+.reasoning-accordion {
+  margin-bottom: 12px;
+  background: rgba(245, 158, 11, 0.07);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.reasoning-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-family: var(--mono);
+  color: #fbbf24;
+  cursor: pointer;
+  user-select: none;
+}
+
+.reasoning-header:hover {
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.reasoning-body {
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #fde68a;
+  border-top: 1px solid rgba(245, 158, 11, 0.15);
+  white-space: pre-wrap;
+  font-family: var(--mono);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+/* Code Block Wrapper & Copy Button */
+.code-block-wrapper {
+  margin: 12px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0d0f14;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11.5px;
+  font-family: var(--mono);
+  color: var(--text-dim);
+}
+
+.copy-code-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--mono);
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.copy-code-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+/* ============================================================
+   Council of AI Consensus Perspective Cards
+   ============================================================ */
+.consensus-container {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.consensus-perspectives-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.consensus-card {
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+}
+
+.consensus-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.consensus-card-specialty {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+}
+
+/* ============================================================
+   Knowledge Graph Memory Modal & Drawer
+   ============================================================ */
+.knowledge-modal {
+  max-width: 860px;
+}
+
+.knowledge-content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  padding: 16px 0;
+}
+
+.knowledge-section.full-width {
+  grid-column: 1 / -1;
+}
+
+.knowledge-section h3 {
+  font-size: 13.5px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.knowledge-card {
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  min-height: 90px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.knowledge-facts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.knowledge-facts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.knowledge-fact-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.delete-fact-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.delete-fact-btn:hover {
+  color: #ff5c7c;
+}
+
+.mini-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+}

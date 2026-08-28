@@ -23,6 +23,27 @@ const modelsGrid = document.getElementById("models-grid");
 const modelsCountBadge = document.getElementById("models-count-badge");
 const modelsBtnLabel = document.getElementById("models-btn-label");
 
+// Council of AI & Knowledge Graph Elements
+const consensusToggleBtn = document.getElementById("consensus-toggle-btn");
+const knowledgeBtn = document.getElementById("knowledge-btn");
+const knowledgeOverlay = document.getElementById("knowledge-overlay");
+const knowledgeCloseBtn = document.getElementById("knowledge-close-btn");
+const knowledgeCountBadge = document.getElementById("knowledge-count-badge");
+const knowledgeUserCard = document.getElementById("knowledge-user-card");
+const knowledgeProjectsCard = document.getElementById("knowledge-projects-card");
+const knowledgeContactsCard = document.getElementById("knowledge-contacts-card");
+const knowledgeFactsList = document.getElementById("knowledge-facts-list");
+const addFactBtn = document.getElementById("add-fact-btn");
+
+// Multimodal File Upload Elements
+const attachBtn = document.getElementById("attach-btn");
+const fileInput = document.getElementById("file-input");
+const filePreviewBar = document.getElementById("file-preview-bar");
+const dropZoneOverlay = document.getElementById("drop-zone-overlay");
+
+let isConsensusModeActive = false;
+let pendingAttachedFiles = [];
+
 // Live Voice Elements
 const liveVoiceOverlay = document.getElementById("live-voice-overlay");
 const liveStatusText = document.getElementById("live-status-text");
@@ -1097,6 +1118,14 @@ async function startMicVisualizer() {
       const avg = sum / bufferLength;
       isUserActivelySpeaking = avg > 14;
 
+      // Instant Barge-In: if user speaks while assistant is speaking, cut audio immediately
+      if (isUserActivelySpeaking && liveState === "SPEAKING") {
+        playChime("interrupt");
+        stopSpeaking(false);
+        setLiveState("LISTENING");
+        liveAssistantCaption.textContent = "Listening to you, sir...";
+      }
+
       // If user is vocalizing, prolong silence timer dynamically
       if (isUserActivelySpeaking && silenceTimer && isLiveModeActive && liveState === "LISTENING") {
         clearTimeout(silenceTimer);
@@ -1380,6 +1409,348 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
+// ============================================================
+// Markdown Formatter & Code Copy Utilities
+// ============================================================
+function escapeHtml(str) {
+  return (str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatMarkdown(text) {
+  if (!text) return "";
+  let safe = text;
+
+  // 1. Code blocks ```lang\ncode\n```
+  safe = safe.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+    const cleanLang = lang.trim() || "code";
+    const escapedCode = escapeHtml(code.trim());
+    return `<div class="code-block-wrapper">
+      <div class="code-block-header">
+        <span class="code-lang-tag">${cleanLang}</span>
+        <button class="copy-code-btn" type="button" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.textContent); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy', 1500);">Copy</button>
+      </div>
+      <pre><code>${escapedCode}</code></pre>
+    </div>`;
+  });
+
+  // 2. Inline code `code`
+  safe = safe.replace(/`([^`]+)`/g, (m, c) => `<code>${escapeHtml(c)}</code>`);
+
+  // 3. Bold **text**
+  safe = safe.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+
+  // 4. Italic *text*
+  safe = safe.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+
+  // 5. Links [text](url)
+  safe = safe.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1 ↗</a>');
+
+  // 6. Convert newlines to breaks (outside pre blocks)
+  const parts = safe.split(/(<div class="code-block-wrapper">[\s\S]*?<\/div>)/g);
+  return parts.map((part) => {
+    if (part.startsWith('<div class="code-block-wrapper">')) return part;
+    return part.replace(/\n/g, "<br/>");
+  }).join("");
+}
+
+// ============================================================
+// Multimodal File Studio & Drag-and-Drop
+// ============================================================
+function renderFileChips() {
+  if (!filePreviewBar) return;
+  if (pendingAttachedFiles.length === 0) {
+    filePreviewBar.hidden = true;
+    filePreviewBar.innerHTML = "";
+    return;
+  }
+
+  filePreviewBar.hidden = false;
+  filePreviewBar.innerHTML = "";
+
+  pendingAttachedFiles.forEach((file, index) => {
+    const chip = document.createElement("div");
+    chip.className = "file-chip";
+
+    if (file.kind === "image" && file.dataUrl) {
+      chip.innerHTML = `
+        <img class="file-chip-thumb" src="${file.dataUrl}" alt="${escapeHtml(file.name)}" />
+        <span class="file-chip-name">${escapeHtml(file.name)}</span>
+        <button type="button" class="file-chip-remove" title="Remove">&times;</button>
+      `;
+    } else {
+      const icon = file.kind === "tabular" ? "📊" : "📄";
+      chip.innerHTML = `
+        <span>${icon}</span>
+        <span class="file-chip-name">${escapeHtml(file.name)}</span>
+        <button type="button" class="file-chip-remove" title="Remove">&times;</button>
+      `;
+    }
+
+    chip.querySelector(".file-chip-remove").addEventListener("click", () => {
+      pendingAttachedFiles.splice(index, 1);
+      renderFileChips();
+    });
+
+    filePreviewBar.appendChild(chip);
+  });
+}
+
+async function handleFiles(fileList) {
+  if (!fileList || fileList.length === 0) return;
+
+  for (const f of Array.from(fileList)) {
+    const reader = new FileReader();
+
+    if (f.type.startsWith("image/")) {
+      reader.onload = async (e) => {
+        try {
+          const res = await fetch("/api/files/process", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: f.name,
+              type: f.type,
+              dataUrl: e.target.result,
+            }),
+          });
+          const data = await res.json();
+          if (data.ok && data.file) {
+            pendingAttachedFiles.push(data.file);
+            renderFileChips();
+          }
+        } catch (err) {
+          console.error("File upload error:", err);
+        }
+      };
+      reader.readAsDataURL(f);
+    } else {
+      reader.onload = async (e) => {
+        try {
+          const res = await fetch("/api/files/process", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: f.name,
+              type: f.type,
+              textContent: e.target.result,
+            }),
+          });
+          const data = await res.json();
+          if (data.ok && data.file) {
+            pendingAttachedFiles.push(data.file);
+            renderFileChips();
+          }
+        } catch (err) {
+          console.error("File processing error:", err);
+        }
+      };
+      reader.readAsText(f);
+    }
+  }
+}
+
+if (attachBtn && fileInput) {
+  attachBtn.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", (e) => {
+    handleFiles(e.target.files);
+    fileInput.value = "";
+  });
+}
+
+// Window Drag & Drop Overlay
+let dragCounter = 0;
+window.addEventListener("dragenter", (e) => {
+  e.preventDefault();
+  dragCounter++;
+  if (dropZoneOverlay) dropZoneOverlay.hidden = false;
+});
+window.addEventListener("dragleave", (e) => {
+  e.preventDefault();
+  dragCounter--;
+  if (dragCounter <= 0 && dropZoneOverlay) {
+    dropZoneOverlay.hidden = true;
+    dragCounter = 0;
+  }
+});
+window.addEventListener("dragover", (e) => {
+  e.preventDefault();
+});
+window.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dragCounter = 0;
+  if (dropZoneOverlay) dropZoneOverlay.hidden = true;
+  if (e.dataTransfer && e.dataTransfer.files) {
+    handleFiles(e.dataTransfer.files);
+  }
+});
+
+// ============================================================
+// Council of AI & Consensus Mode
+// ============================================================
+function updateConsensusUI() {
+  if (!consensusToggleBtn) return;
+  if (isConsensusModeActive) {
+    consensusToggleBtn.classList.add("active");
+    consensusToggleBtn.style.borderColor = "#a78bfa";
+    consensusToggleBtn.style.background = "rgba(167, 139, 250, 0.15)";
+    input.placeholder = "🏛️ Ask the Council of 3 Flagship AI Models (Claude, DeepSeek, GPT-4o)...";
+  } else {
+    consensusToggleBtn.classList.remove("active");
+    consensusToggleBtn.style.borderColor = "";
+    consensusToggleBtn.style.background = "";
+    input.placeholder = "Type or speak your task... (or drag & drop files)";
+  }
+}
+
+if (consensusToggleBtn) {
+  consensusToggleBtn.addEventListener("click", () => {
+    isConsensusModeActive = !isConsensusModeActive;
+    updateConsensusUI();
+  });
+}
+
+function renderConsensusPerspectives(perspectives) {
+  if (!Array.isArray(perspectives) || perspectives.length === 0) return "";
+
+  const cardsHtml = perspectives
+    .filter((p) => p.success)
+    .map((p) => `
+      <div class="consensus-card">
+        <div class="consensus-card-header">
+          <span>${escapeHtml(p.label)}</span>
+        </div>
+        <div class="consensus-card-specialty">${escapeHtml(p.specialty)}</div>
+        <div style="margin-top:8px; line-height:1.45; font-size:12.5px; opacity:0.9;">
+          ${formatMarkdown(p.response.slice(0, 450))}...
+        </div>
+      </div>
+    `)
+    .join("");
+
+  return `
+    <div class="consensus-container">
+      <div style="font-size:12px; font-family:var(--mono); color:#a78bfa; font-weight:700;">
+        🏛️ COUNCIL OF 3 DELIBERATION PERSPECTIVES
+      </div>
+      <div class="consensus-perspectives-grid">
+        ${cardsHtml}
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================
+// Knowledge Graph Memory Modal Handlers
+// ============================================================
+function renderKnowledgeData(k) {
+  if (!k) return;
+
+  // User Profile
+  if (knowledgeUserCard) {
+    const prefs = Object.entries(k.user.preferences || {});
+    knowledgeUserCard.innerHTML = `
+      <div><strong>Name:</strong> ${escapeHtml(k.user.name || "Sir")}</div>
+      <div style="margin-top:6px;"><strong>Preferences:</strong></div>
+      <div style="font-size:12px; color:var(--text-dim); margin-top:2px;">
+        ${prefs.length > 0 ? prefs.map(([key, val]) => `• ${escapeHtml(key)}: ${escapeHtml(val)}`).join("<br/>") : "<em>(learning as you chat)</em>"}
+      </div>
+    `;
+  }
+
+  // Active Projects
+  if (knowledgeProjectsCard) {
+    const projs = Object.entries(k.projects || {});
+    knowledgeProjectsCard.innerHTML = projs.length > 0
+      ? projs.map(([pName, pDesc]) => `<div><strong>${escapeHtml(pName)}:</strong> ${escapeHtml(pDesc)}</div>`).join("<div style='margin:4px 0;'></div>")
+      : "<em style='color:var(--text-dim);'>No projects indexed yet.</em>";
+  }
+
+  // Contacts
+  if (knowledgeContactsCard) {
+    const conts = Object.entries(k.contacts || {});
+    knowledgeContactsCard.innerHTML = conts.length > 0
+      ? conts.map(([cName, cInfo]) => `<div><strong>${escapeHtml(cName)}:</strong> ${escapeHtml(cInfo)}</div>`).join("<div style='margin:4px 0;'></div>")
+      : "<em style='color:var(--text-dim);'>No contacts indexed yet.</em>";
+  }
+
+  // Facts List
+  if (knowledgeFactsList) {
+    knowledgeFactsList.innerHTML = "";
+    if (!k.facts || k.facts.length === 0) {
+      knowledgeFactsList.innerHTML = "<div style='color:var(--text-dim); font-size:13px;'>No custom facts saved yet. Sia automatically extracts personal facts during conversation.</div>";
+    } else {
+      k.facts.slice().reverse().forEach((fact) => {
+        const item = document.createElement("div");
+        item.className = "knowledge-fact-item";
+        item.innerHTML = `
+          <span>${escapeHtml(fact.text)}</span>
+          <button type="button" class="delete-fact-btn" title="Delete Fact">&times;</button>
+        `;
+        item.querySelector(".delete-fact-btn").addEventListener("click", async () => {
+          try {
+            const res = await fetch(`/api/memory/knowledge/${fact.id}`, { method: "DELETE" });
+            const data = await res.json();
+            if (data.ok) renderKnowledgeData(data.knowledge);
+          } catch (e) {
+            console.error("Delete fact error:", e);
+          }
+        });
+        knowledgeFactsList.appendChild(item);
+      });
+    }
+  }
+}
+
+async function loadKnowledgeGraph() {
+  try {
+    const res = await fetch("/api/memory/knowledge");
+    const data = await res.json();
+    if (data.ok && data.knowledge) {
+      renderKnowledgeData(data.knowledge);
+    }
+  } catch (err) {
+    console.error("Failed to load knowledge graph:", err);
+  }
+}
+
+if (knowledgeBtn && knowledgeOverlay) {
+  knowledgeBtn.addEventListener("click", () => {
+    knowledgeOverlay.hidden = false;
+    loadKnowledgeGraph();
+  });
+}
+if (knowledgeCloseBtn && knowledgeOverlay) {
+  knowledgeCloseBtn.addEventListener("click", () => {
+    knowledgeOverlay.hidden = true;
+  });
+}
+
+if (addFactBtn) {
+  addFactBtn.addEventListener("click", async () => {
+    const factText = prompt("Enter a persistent fact or preference for Sia to remember:");
+    if (!factText || !factText.trim()) return;
+
+    try {
+      const res = await fetch("/api/memory/knowledge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: factText.trim() }),
+      });
+      const data = await res.json();
+      if (data.ok && data.knowledge) {
+        renderKnowledgeData(data.knowledge);
+      }
+    } catch (err) {
+      alert("Failed to save fact: " + err.message);
+    }
+  });
+}
+
 function addAssistantMessage(answer, routing, shouldSpeak = true, steps = []) {
   const el = document.createElement("div");
   el.className = "msg assistant";
@@ -1401,7 +1772,6 @@ function addAssistantMessage(answer, routing, shouldSpeak = true, steps = []) {
           name: res.opened || res.to || "Web Application",
           url: url,
         });
-        // Direct launch in client browser tab
         try {
           window.open(url, "_blank");
         } catch (_) {}
@@ -1422,13 +1792,11 @@ function addAssistantMessage(answer, routing, shouldSpeak = true, steps = []) {
       </button>
     </div>
     <div class="bubble" style="--route-color:${color}">
-      <div class="bubble-text"></div>
+      <div class="bubble-text">${formatMarkdown(answer)}</div>
     </div>
   `;
 
   const bubble = el.querySelector(".bubble");
-  const bubbleText = el.querySelector(".bubble-text");
-  bubbleText.textContent = answer;
 
   if (actionUrls.length > 0) {
     const actionContainer = document.createElement("div");
@@ -1466,25 +1834,70 @@ function addAssistantMessage(answer, routing, shouldSpeak = true, steps = []) {
 function addErrorMessage(text) {
   const el = document.createElement("div");
   el.className = "msg assistant error";
-  el.innerHTML = `<div class="bubble"></div>`;
-  el.querySelector(".bubble").textContent = text;
+  el.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
   chatWindow.appendChild(el);
   scrollToBottom();
 }
 
+// ============================================================
+// Real-Time SSE Streaming Form Submission Handler
+// ============================================================
 composer.addEventListener("submit", async (e) => {
   e.preventDefault();
   stopListening();
   stopSpeaking(false);
 
   const message = input.value.trim();
-  if (!message) return;
+  const attachedFiles = [...pendingAttachedFiles];
+  if (!message && attachedFiles.length === 0) return;
 
-  addUserMessage(message);
+  // Clear input and files
+  addUserMessage(message || `[Attached ${attachedFiles.length} file(s)]`);
   input.value = "";
+  pendingAttachedFiles = [];
+  renderFileChips();
   sendBtn.disabled = true;
-  const thinkingEl = addThinking();
 
+  // 1. Council of AI Consensus Path
+  if (isConsensusModeActive) {
+    const thinkingEl = addThinking();
+    try {
+      const res = await fetch("/api/chat/consensus", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+      const data = await res.json();
+      thinkingEl.remove();
+
+      if (!res.ok) {
+        addErrorMessage(data.error || "Consensus deliberation failed.");
+        return;
+      }
+
+      // Render Consensus Master Answer + Perspective Cards
+      const consensusCardHtml = renderConsensusPerspectives(data.perspectives);
+      const combinedAnswer = `${data.answer}\n\n${consensusCardHtml}`;
+      addAssistantMessage(data.answer, data.routing, true);
+
+      // Append perspectives below the message
+      const lastMsgBubble = chatWindow.lastElementChild?.querySelector(".bubble");
+      if (lastMsgBubble && data.perspectives) {
+        const persContainer = document.createElement("div");
+        persContainer.innerHTML = renderConsensusPerspectives(data.perspectives);
+        lastMsgBubble.appendChild(persContainer);
+      }
+    } catch (err) {
+      thinkingEl.remove();
+      addErrorMessage("Consensus error: " + err.message);
+    } finally {
+      sendBtn.disabled = false;
+      input.focus();
+    }
+    return;
+  }
+
+  // 2. Real-Time SSE Token & Reasoning Streaming Path
   let forceCategory = null;
   let forceModel = null;
   const selectedVal = overrideSelect.value || null;
@@ -1496,30 +1909,147 @@ composer.addEventListener("submit", async (e) => {
     }
   }
 
+  // Create stream placeholder element in chatWindow
+  const streamMsgEl = document.createElement("div");
+  streamMsgEl.className = "msg assistant streaming-msg";
+  streamMsgEl.innerHTML = `
+    <div class="msg-meta">
+      <div class="route-chip stream-route-chip" style="--route-color:var(--accent)">
+        <span class="dot"></span>
+        <span class="model-name">Sia Orchestrating...</span>
+      </div>
+      <button class="speak-btn" type="button" title="Read aloud" style="display:none;">
+        ${getSpeakerIcon(false)}
+      </button>
+    </div>
+    <div class="bubble" style="--route-color:var(--accent)">
+      <div class="reasoning-accordion" hidden>
+        <div class="reasoning-header">
+          <span>🧠 Neural Reasoning Process</span>
+          <span class="reasoning-toggle">▼</span>
+        </div>
+        <div class="reasoning-body"></div>
+      </div>
+      <div class="bubble-text"><span class="streaming-cursor"></span></div>
+    </div>
+  `;
+
+  chatWindow.appendChild(streamMsgEl);
+  scrollToBottom();
+
+  const bubbleText = streamMsgEl.querySelector(".bubble-text");
+  const reasoningAcc = streamMsgEl.querySelector(".reasoning-accordion");
+  const reasoningBody = streamMsgEl.querySelector(".reasoning-body");
+  const reasoningHeader = streamMsgEl.querySelector(".reasoning-header");
+  const routeChip = streamMsgEl.querySelector(".stream-route-chip");
+  const modelNameSpan = streamMsgEl.querySelector(".model-name");
+  const speakBtn = streamMsgEl.querySelector(".speak-btn");
+
+  if (reasoningHeader) {
+    reasoningHeader.addEventListener("click", () => {
+      reasoningBody.hidden = !reasoningBody.hidden;
+      const toggle = reasoningHeader.querySelector(".reasoning-toggle");
+      if (toggle) toggle.textContent = reasoningBody.hidden ? "▶" : "▼";
+    });
+  }
+
+  let accumulatedContent = "";
+  let accumulatedReasoning = "";
+  let currentRouting = { modelLabel: "Sia", category: "general" };
+
   try {
-    const res = await fetch("/api/chat", {
+    const response = await fetch("/api/chat/stream", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, forceCategory, forceModel }),
+      body: JSON.stringify({
+        message,
+        files: attachedFiles,
+        forceCategory,
+        forceModel,
+      }),
     });
-    const data = await res.json();
-    thinkingEl.remove();
 
-    if (res.status === 401) {
-      showLogin();
+    if (!response.ok) {
+      const errJson = await response.json().catch(() => ({}));
+      streamMsgEl.remove();
+      addErrorMessage(errJson.error || "Streaming request failed.");
       return;
     }
 
-    if (!res.ok) {
-      addErrorMessage(data.error || "Something went wrong.");
-      return;
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n\n");
+      buffer = lines.pop() || "";
+
+      for (const block of lines) {
+        if (!block.trim()) continue;
+        const eventMatch = block.match(/event:\s*([^\n]+)/);
+        const dataMatch = block.match(/data:\s*([\s\S]+)/);
+
+        if (!eventMatch || !dataMatch) continue;
+        const eventName = eventMatch[1].trim();
+        let eventData = {};
+        try {
+          eventData = JSON.parse(dataMatch[1].trim());
+        } catch (_) {}
+
+        if (eventName === "routing") {
+          currentRouting = eventData;
+          modelNameSpan.textContent = `${eventData.modelLabel} · ${eventData.category.replace(/_/g, " ")}`;
+          const col = `var(--route-${eventData.category}, var(--accent))`;
+          routeChip.style.setProperty("--route-color", col);
+          streamMsgEl.querySelector(".bubble").style.setProperty("--route-color", col);
+        } else if (eventName === "reasoning") {
+          accumulatedReasoning += eventData.text || "";
+          reasoningAcc.hidden = false;
+          reasoningBody.textContent = accumulatedReasoning;
+          scrollToBottom();
+        } else if (eventName === "token") {
+          accumulatedContent += eventData.content || "";
+          bubbleText.innerHTML = `${formatMarkdown(accumulatedContent)}<span class="streaming-cursor"></span>`;
+          scrollToBottom();
+        } else if (eventName === "steps") {
+          // Action urls
+          if (Array.isArray(eventData.steps)) {
+            for (const s of eventData.steps) {
+              const res = s.result?.result || s.result;
+              const url = res?.url || res?.openedUrl;
+              if (url) {
+                try { window.open(url, "_blank"); } catch (_) {}
+              }
+            }
+          }
+        } else if (eventName === "done") {
+          accumulatedContent = eventData.answer || accumulatedContent;
+          bubbleText.innerHTML = formatMarkdown(accumulatedContent);
+          speakBtn.style.display = "inline-flex";
+          speakBtn.addEventListener("click", () => {
+            if (speakBtn.classList.contains("speaking")) stopSpeaking(false);
+            else speakText(accumulatedContent, speakBtn);
+          });
+          if (autoVoiceEnabled && !isLiveModeActive) {
+            speakText(accumulatedContent, speakBtn);
+          }
+        } else if (eventName === "error") {
+          addErrorMessage(eventData.error || "Streaming error.");
+        }
+      }
     }
 
-    addAssistantMessage(data.answer, data.routing, true, data.steps);
+    bubbleText.innerHTML = formatMarkdown(accumulatedContent || "Done, sir.");
+    const cur = bubbleText.querySelector(".streaming-cursor");
+    if (cur) cur.remove();
   } catch (err) {
-    thinkingEl.remove();
-    addErrorMessage("Network error: " + err.message);
+    streamMsgEl.remove();
+    addErrorMessage("Network connection error: " + err.message);
   } finally {
     sendBtn.disabled = false;
     input.focus();

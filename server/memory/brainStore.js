@@ -212,10 +212,13 @@ function markStepDone(sessionId, index) {
   return writeState(sessionId, state);
 }
 
+const knowledgeGraph = require("./knowledgeGraph");
+
 /**
  * Appends one chat turn to recent_messages immediately. If the window exceeds
  * RECENT_MESSAGE_LIMIT, the oldest overflow is folded into chat_summary
  * in the background (asynchronously) without blocking the response turn.
+ * Also triggers knowledge graph extraction on assistant replies.
  */
 async function appendMessage(sessionId, role, content) {
   const state = readState(sessionId);
@@ -240,6 +243,16 @@ async function appendMessage(sessionId, role, content) {
         console.error("Async brain summarization error:", err.message);
       }
     });
+  }
+
+  // Trigger background knowledge graph extraction for assistant answers
+  if (role === "assistant" && state.recent_messages.length >= 2) {
+    const lastUserMsg = [...state.recent_messages].reverse().find(m => m.role === "user");
+    if (lastUserMsg) {
+      setImmediate(() => {
+        knowledgeGraph.extractAndSyncKnowledge(sessionId, lastUserMsg.content, content);
+      });
+    }
   }
 
   return state;
@@ -273,11 +286,25 @@ async function foldIntoSummary(existingSummary, overflowMessages) {
 
 function getContextForModel(sessionId) {
   const state = readState(sessionId);
-  const summaryPreamble = state.chat_summary
-    ? [{ role: "system", content: `Earlier conversation summary: ${state.chat_summary}` }]
-    : [];
+  const contextMessages = [];
+
+  const knowledgeBlock = knowledgeGraph.formatKnowledgeForPrompt(sessionId);
+  if (knowledgeBlock) {
+    contextMessages.push({
+      role: "system",
+      content: `[SIA LONG-TERM KNOWLEDGE GRAPH MEMORY]\n${knowledgeBlock}`,
+    });
+  }
+
+  if (state.chat_summary) {
+    contextMessages.push({
+      role: "system",
+      content: `Earlier conversation summary: ${state.chat_summary}`,
+    });
+  }
+
   const recent = state.recent_messages.map((m) => ({ role: m.role, content: m.content }));
-  return [...summaryPreamble, ...recent];
+  return [...contextMessages, ...recent];
 }
 
 module.exports = {
@@ -291,4 +318,5 @@ module.exports = {
   appendMessage,
   getContextForModel,
   defaultState,
+  knowledgeGraph,
 };

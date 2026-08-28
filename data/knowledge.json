@@ -1,0 +1,24 @@
+{
+  "user": {
+    "name": "Sir",
+    "preferences": {},
+    "interests": []
+  },
+  "contacts": {},
+  "projects": {},
+  "facts": [
+    {
+      "id": "fact_1787941497308_gyee",
+      "category": "preference",
+      "text": "cyberpunk_dark",
+      "created_at": "2026-08-28T18:24:57.308Z"
+    },
+    {
+      "id": "fact_1787941523871_7tbu",
+      "category": "preference",
+      "text": "cyberpunk_dark",
+      "created_at": "2026-08-28T18:25:23.871Z"
+    }
+  ],
+  "last_updated": "2026-08-28T18:25:23.873Z"
+}

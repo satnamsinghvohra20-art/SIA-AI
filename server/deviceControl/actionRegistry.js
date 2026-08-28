@@ -409,10 +409,37 @@ const ACTIONS = {
     },
     handler: calls.placeCall,
   },
+
+  ground_ui_element: {
+    description:
+      "Visually locate any UI element, button, search bar, icon, or link on screen using high-resolution screenshot vision grounding and return exact (X, Y) pixel coordinates.",
+    risk: "safe",
+    params: {
+      type: "object",
+      properties: {
+        targetDescription: { type: "string", description: "Visual description of the button, field, icon or text to locate" },
+      },
+      required: ["targetDescription"],
+    },
+    handler: (args) => require("./visionGrounding").groundElementCoordinates(args),
+  },
+
+  verify_action_result: {
+    description: "Take a verification screenshot after an action to confirm that the UI state updated as expected.",
+    risk: "safe",
+    params: {
+      type: "object",
+      properties: {
+        expectedOutcome: { type: "string", description: "What visual outcome to verify on screen" },
+      },
+      required: ["expectedOutcome"],
+    },
+    handler: (args) => require("./visionGrounding").verifyActionResult(args),
+  },
 };
 
 function toToolDefinitions() {
-  return Object.entries(ACTIONS).map(([name, def]) => ({
+  const baseTools = Object.entries(ACTIONS).map(([name, def]) => ({
     type: "function",
     function: {
       name,
@@ -420,6 +447,21 @@ function toToolDefinitions() {
       parameters: def.params,
     },
   }));
+
+  try {
+    const mcp = require("../plugins/mcpClient");
+    const mcpTools = mcp.getActiveTools().map((t) => ({
+      type: "function",
+      function: {
+        name: t.name,
+        description: t.description,
+        parameters: t.params,
+      },
+    }));
+    return [...baseTools, ...mcpTools];
+  } catch (_) {
+    return baseTools;
+  }
 }
 
 module.exports = { ACTIONS, toToolDefinitions };

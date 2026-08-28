@@ -1,0 +1,50 @@
+{
+  "servers": [
+    {
+      "name": "brave-search",
+      "url": "https://api.search.brave.com",
+      "enabled": false,
+      "description": "Live Web & News Search MCP Server",
+      "tools": [
+        {
+          "name": "mcp_brave_web_search",
+          "description": "Perform real-time web searches using Brave Search API",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "Search query"
+              }
+            },
+            "required": [
+              "query"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "github",
+      "enabled": false,
+      "description": "GitHub repository and issues MCP server",
+      "tools": [
+        {
+          "name": "mcp_github_search_repos",
+          "description": "Search public GitHub repositories and code",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "query"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

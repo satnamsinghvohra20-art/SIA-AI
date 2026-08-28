@@ -3,18 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sia · Personal AI Assistant</title>
+  <title>Sia · Advanced Autonomous AI</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="app">
+  <div class="app" id="app-root">
     <header class="app-header">
       <div class="header-top">
         <div class="brand">
           <span class="brand-dot"></span>
           <h1>Sia</h1>
+          <span class="brand-badge">Autonomous OS</span>
         </div>
         <div class="header-actions">
+          <button id="consensus-toggle-btn" class="live-voice-btn consensus-btn" type="button" title="Toggle Council of 3 Frontier AI Models">
+            <span class="live-orb-mini consensus-orb-glow"></span>
+            <span>🏛️ Council of AI</span>
+          </button>
+          <button id="knowledge-btn" class="live-voice-btn memory-btn" type="button" title="View Sia's Long-Term Knowledge Graph">
+            <span class="live-orb-mini memory-orb-glow"></span>
+            <span>🧠 Memory Graph</span>
+          </button>
           <button id="models-catalog-btn" class="live-voice-btn models-btn" type="button" title="Browse 300+ AI Agents & Models">
             <span class="live-orb-mini model-orb-glow"></span>
             <span id="models-btn-label">🌐 300+ AI Models</span>
@@ -23,7 +32,7 @@
             <span class="live-orb-mini"></span>
             <span>Device Control</span>
           </button>
-          <button id="live-voice-btn" class="live-voice-btn jarvis-hud-btn" type="button" title="Start Hands-Free Sia Live Voice">
+          <button id="live-voice-btn" class="live-voice-btn jarvis-hud-btn" type="button" title="Start Hands-Free Sia Live Voice with Barge-In">
             <span class="live-orb-mini jarvis-orb-glow"></span>
             <span>⚡ Sia Live</span>
           </button>
@@ -37,15 +46,67 @@
           </button>
         </div>
       </div>
-      <p class="tagline">300+ AI Models & Hands-Free Voice Control · At your service, sir.</p>
+      <p class="tagline">Real-Time Streaming · Multimodal Studio · Long-Term Memory · At your service, sir.</p>
     </header>
 
     <main class="chat-window" id="chat-window">
       <div class="empty-state" id="empty-state">
-        <p>Sia is online and ready for instructions, sir.</p>
-        <p class="empty-sub">Say "Sia" or type — access 300+ AI models, Microsoft Edge browsing, coding, reasoning, research, and systems.</p>
+        <div class="empty-hero-orb"></div>
+        <p class="empty-title">Sia is online and ready for instructions, sir.</p>
+        <p class="empty-sub">Ask questions, attach images & datasets, run multi-model consensus, or execute unrestricted device tasks.</p>
+      </div>
+
+      <div class="drop-zone-overlay" id="drop-zone-overlay" hidden>
+        <div class="drop-zone-box">
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <p>Drop images, PDFs, CSVs, or code files here for Sia</p>
+        </div>
       </div>
     </main>
+
+    <!-- Knowledge Graph Memory Drawer Modal -->
+    <div class="models-overlay" id="knowledge-overlay" hidden>
+      <div class="models-modal knowledge-modal">
+        <div class="models-modal-header">
+          <div class="models-modal-title">
+            <h2>🧠 Sia Long-Term Knowledge Graph</h2>
+            <span class="models-count-badge" id="knowledge-count-badge">Dynamic Facts & Context</span>
+          </div>
+          <button id="knowledge-close-btn" class="live-icon-btn" type="button" title="Close">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="knowledge-content-grid" id="knowledge-content-grid">
+          <div class="knowledge-section">
+            <h3>👤 User Profile</h3>
+            <div id="knowledge-user-card" class="knowledge-card"></div>
+          </div>
+          <div class="knowledge-section">
+            <h3>🗂️ Active Projects</h3>
+            <div id="knowledge-projects-card" class="knowledge-card"></div>
+          </div>
+          <div class="knowledge-section">
+            <h3>📞 Contacts & Integrations</h3>
+            <div id="knowledge-contacts-card" class="knowledge-card"></div>
+          </div>
+          <div class="knowledge-section full-width">
+            <div class="knowledge-facts-header">
+              <h3>📌 Extracted Personal Facts</h3>
+              <button id="add-fact-btn" class="device-approve-btn mini-btn" type="button">+ Add Fact</button>
+            </div>
+            <div id="knowledge-facts-list" class="knowledge-facts-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- 300+ AI Models Catalog Modal -->
     <div class="models-overlay" id="models-overlay" hidden>
@@ -89,7 +150,7 @@
       </div>
     </div>
 
-    <!-- Live Voice Fullscreen Experience -->
+    <!-- Live Voice Fullscreen Experience with Barge-In -->
     <div class="live-voice-overlay" id="live-voice-overlay" hidden>
       <div class="live-ambient-glow"></div>
       
@@ -149,7 +210,7 @@
 
         <div class="live-subtitles" id="live-subtitles">
           <p class="live-user-caption" id="live-user-caption"></p>
-          <p class="live-assistant-caption" id="live-assistant-caption">Sia voice protocol active. Say "Sia" or speak freely, sir...</p>
+          <p class="live-assistant-caption" id="live-assistant-caption">Sia voice protocol active. Speak freely, or interrupt anytime, sir...</p>
         </div>
       </div>
 
@@ -186,10 +247,10 @@
             </svg>
           </button>
         </div>
-        <p class="device-sub">Tell Sia what to do on this device. Voice and device commands execute automatically using Microsoft Edge and Windows apps.</p>
+        <p class="device-sub">Tell Sia what to do on this device. Voice and device commands execute automatically using Microsoft Edge, Windows tools, and Vision Grounding.</p>
 
         <form id="device-form" class="device-form">
-          <input id="device-instruction" type="text" placeholder="e.g. open youtube in edge, search for music, or open whatsapp" autocomplete="off" />
+          <input id="device-instruction" type="text" placeholder="e.g. open youtube, locate the checkout button, or open whatsapp" autocomplete="off" />
           <button type="button" id="device-mic-btn" class="device-mic-btn" title="Speak your instruction">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
@@ -214,6 +275,7 @@
       </div>
     </div>
 
+    <!-- Login Overlay -->
     <div class="login-overlay" id="login-overlay" hidden>
       <form class="login-box" id="login-form">
         <h2>Sia is locked</h2>
@@ -224,29 +286,39 @@
       </form>
     </div>
 
-    <form class="composer" id="composer">
-      <select id="override-select" title="Force a specific model category">
-        <option value="">Auto-route</option>
-      </select>
-      <div class="input-wrapper">
-        <input
-          id="message-input"
-          type="text"
-          placeholder="Type or speak your task..."
-          autocomplete="off"
-        />
-        <button type="button" id="mic-btn" class="mic-btn" title="Speak to Sia (Voice recognition)">
-          <svg class="mic-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-            <line x1="12" y1="19" x2="12" y2="23"></line>
-            <line x1="8" y1="23" x2="16" y2="23"></line>
+    <!-- Composer with Multimodal File Uploads -->
+    <div class="composer-container">
+      <div id="file-preview-bar" class="file-preview-bar" hidden></div>
+      <form class="composer" id="composer">
+        <input type="file" id="file-input" multiple hidden accept="image/*,.pdf,.csv,.txt,.md,.json,.js,.ts,.py,.html,.css" />
+        <button type="button" id="attach-btn" class="composer-icon-btn" title="Attach Image, PDF, CSV, or Code File">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
           </svg>
-          <span class="mic-pulse"></span>
         </button>
-      </div>
-      <button type="submit" id="send-btn">Send</button>
-    </form>
+        <select id="override-select" title="Force a specific model category">
+          <option value="">Auto-route (300+)</option>
+        </select>
+        <div class="input-wrapper">
+          <input
+            id="message-input"
+            type="text"
+            placeholder="Type or speak your task... (or drag & drop files)"
+            autocomplete="off"
+          />
+          <button type="button" id="mic-btn" class="mic-btn" title="Speak to Sia (Voice recognition)">
+            <svg class="mic-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+            </svg>
+            <span class="mic-pulse"></span>
+          </button>
+        </div>
+        <button type="submit" id="send-btn">Send</button>
+      </form>
+    </div>
   </div>
 
   <script src="app.js"></script>

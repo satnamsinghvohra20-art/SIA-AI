@@ -2,17 +2,18 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 const FALLBACK_MODELS = [
   "openai/gpt-4o-mini",
-  "meta-llama/llama-3.3-70b-instruct",
+  "openai/gpt-5.4-mini",
   "deepseek/deepseek-chat",
-  "google/gemini-2.0-flash-001",
+  "meta-llama/llama-3.3-70b-instruct",
+  "google/gemini-2.5-flash",
   "qwen/qwen-2.5-72b-instruct",
 ];
 
 const FALLBACK_TOOL_MODELS = [
   "openai/gpt-4o-mini",
-  "meta-llama/llama-3.3-70b-instruct",
+  "openai/gpt-5.4-mini",
   "deepseek/deepseek-chat",
-  "google/gemini-2.0-flash-001",
+  "google/gemini-2.5-flash",
 ];
 
 // In-memory cache for quarantined / broken models (30 min TTL)
@@ -51,6 +52,145 @@ async function fetchWithTimeout(url, options, timeoutMs = 8000) {
 }
 
 /**
+ * Streams chat completions from OpenRouter via Server-Sent Events (SSE).
+ * Calls onChunk({ content, reasoning, model, done }) as tokens arrive.
+ * Automatically handles reasoning_content / <think> tags for reasoning models.
+ */
+async function streamOpenRouterCompletion({
+  model,
+  messages,
+  max_tokens = 4096,
+  temperature = 0.7,
+  onChunk,
+}) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error("Missing OPENROUTER_API_KEY. Add it to your .env file.");
+  }
+
+  const candidatePool = [model, ...FALLBACK_MODELS.filter((m) => m !== model)];
+  const activeCandidates = candidatePool.filter((m) => !isModelQuarantined(m));
+  const modelsToTry = activeCandidates.length > 0 ? activeCandidates : candidatePool;
+  let lastError = null;
+
+  for (const currentModel of modelsToTry) {
+    try {
+      const response = await fetch(OPENROUTER_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": process.env.APP_URL || "http://localhost:3000",
+          "X-Title": "Sia AI Autonomous Orchestrator",
+        },
+        body: JSON.stringify({
+          model: currentModel,
+          messages,
+          max_tokens,
+          temperature,
+          stream: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => "");
+        if (response.status === 402 || response.status === 404 || response.status === 400) {
+          quarantineModel(currentModel, `${response.status}: ${errText.slice(0, 100)}`);
+        }
+        throw new Error(`Model ${currentModel} stream returned ${response.status}: ${errText.slice(0, 200)}`);
+      }
+
+      if (!response.body) {
+        throw new Error(`Model ${currentModel} returned no readable stream body`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buffer = "";
+      let fullContent = "";
+      let fullReasoning = "";
+      let inThinkTag = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data:")) continue;
+          const dataStr = trimmed.replace(/^data:\s*/, "");
+          if (dataStr === "[DONE]") {
+            if (onChunk) onChunk({ done: true, fullContent, fullReasoning, model: currentModel });
+            return { content: fullContent, reasoning: fullReasoning, model: currentModel };
+          }
+
+          try {
+            const parsed = JSON.parse(dataStr);
+            const delta = parsed?.choices?.[0]?.delta;
+            if (!delta) continue;
+
+            // 1. Direct reasoning_content from OpenRouter (DeepSeek R1, Gemini Thinking, Claude 3.7)
+            const reasoningDelta = delta.reasoning_content || delta.reasoning || "";
+            if (reasoningDelta) {
+              fullReasoning += reasoningDelta;
+              if (onChunk) onChunk({ reasoning: reasoningDelta, model: currentModel, done: false });
+            }
+
+            // 2. Standard content delta (check for <think> tags)
+            const contentDelta = delta.content || "";
+            if (contentDelta) {
+              if (contentDelta.includes("<think>")) {
+                inThinkTag = true;
+                const parts = contentDelta.split("<think>");
+                if (parts[0]) {
+                  fullContent += parts[0];
+                  if (onChunk) onChunk({ content: parts[0], model: currentModel, done: false });
+                }
+                if (parts[1]) {
+                  fullReasoning += parts[1];
+                  if (onChunk) onChunk({ reasoning: parts[1], model: currentModel, done: false });
+                }
+              } else if (contentDelta.includes("</think>")) {
+                inThinkTag = false;
+                const parts = contentDelta.split("</think>");
+                if (parts[0]) {
+                  fullReasoning += parts[0];
+                  if (onChunk) onChunk({ reasoning: parts[0], model: currentModel, done: false });
+                }
+                if (parts[1]) {
+                  fullContent += parts[1];
+                  if (onChunk) onChunk({ content: parts[1], model: currentModel, done: false });
+                }
+              } else if (inThinkTag) {
+                fullReasoning += contentDelta;
+                if (onChunk) onChunk({ reasoning: contentDelta, model: currentModel, done: false });
+              } else {
+                fullContent += contentDelta;
+                if (onChunk) onChunk({ content: contentDelta, model: currentModel, done: false });
+              }
+            }
+          } catch (parseErr) {
+            // Partial JSON chunk line, ignore and continue
+          }
+        }
+      }
+
+      if (onChunk) onChunk({ done: true, fullContent, fullReasoning, model: currentModel });
+      return { content: fullContent, reasoning: fullReasoning, model: currentModel };
+    } catch (err) {
+      console.warn(`[OpenRouter Stream] Model ${currentModel} stream failed (${err.message}). Trying failover...`);
+      lastError = err;
+    }
+  }
+
+  throw new Error(`All candidate AI models failed to stream. Last error: ${lastError?.message}`);
+}
+
+/**
  * Thin wrapper around OpenRouter unified chat completions endpoint
  * with smart health caching & zero-downtime sub-second failover.
  */
@@ -75,7 +215,7 @@ async function callOpenRouter({ model, messages, max_tokens = 4096, temperature 
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",
             "HTTP-Referer": process.env.APP_URL || "http://localhost:3000",
-            "X-Title": "Sia / J.A.R.V.I.S. Orchestrator",
+            "X-Title": "Sia AI Autonomous Orchestrator",
           },
           body: JSON.stringify({
             model: currentModel,
@@ -135,7 +275,7 @@ async function callOpenRouterWithTools({ model, messages, tools, max_tokens = 20
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",
             "HTTP-Referer": process.env.APP_URL || "http://localhost:3000",
-            "X-Title": "Sia / J.A.R.V.I.S. Orchestrator",
+            "X-Title": "Sia AI Autonomous Orchestrator",
           },
           body: JSON.stringify({
             model: currentModel,
@@ -172,4 +312,4 @@ async function callOpenRouterWithTools({ model, messages, tools, max_tokens = 20
   throw new Error(`All candidate tool models failed. Last error: ${lastError?.message}`);
 }
 
-module.exports = { callOpenRouter, callOpenRouterWithTools };
+module.exports = { callOpenRouter, callOpenRouterWithTools, streamOpenRouterCompletion };
