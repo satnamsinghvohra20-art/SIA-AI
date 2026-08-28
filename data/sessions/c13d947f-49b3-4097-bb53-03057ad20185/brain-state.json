@@ -1,0 +1,25 @@
+{
+  "current_task": {
+    "id": null,
+    "goal": null,
+    "status": "idle",
+    "started_at": null
+  },
+  "plan": [],
+  "decisions_log": [],
+  "chat_summary": "",
+  "recent_messages": [
+    {
+      "role": "user",
+      "content": "What is 7 times 8?",
+      "at": "2026-08-28T18:44:48.032Z"
+    },
+    {
+      "role": "assistant",
+      "content": "7 times 8 is 56.",
+      "at": "2026-08-28T18:44:48.038Z"
+    }
+  ],
+  "blockers": [],
+  "last_updated": "2026-08-28T18:44:48.038Z"
+}

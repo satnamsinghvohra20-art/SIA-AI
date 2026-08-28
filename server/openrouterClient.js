@@ -59,7 +59,7 @@ async function fetchWithTimeout(url, options, timeoutMs = 8000) {
 async function streamOpenRouterCompletion({
   model,
   messages,
-  max_tokens = 4096,
+  max_tokens = 1200,
   temperature = 0.7,
   onChunk,
 }) {
@@ -74,8 +74,9 @@ async function streamOpenRouterCompletion({
   let lastError = null;
 
   for (const currentModel of modelsToTry) {
+    let effectiveMaxTokens = max_tokens;
     try {
-      const response = await fetch(OPENROUTER_URL, {
+      let response = await fetch(OPENROUTER_URL, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -86,7 +87,7 @@ async function streamOpenRouterCompletion({
         body: JSON.stringify({
           model: currentModel,
           messages,
-          max_tokens,
+          max_tokens: effectiveMaxTokens,
           temperature,
           stream: true,
         }),
@@ -94,22 +95,45 @@ async function streamOpenRouterCompletion({
 
       if (!response.ok) {
         const errText = await response.text().catch(() => "");
-        if (response.status === 402 || response.status === 404 || response.status === 400) {
-          quarantineModel(currentModel, `${response.status}: ${errText.slice(0, 100)}`);
+        // Check for affordable tokens in 402 error (e.g. "can only afford 1687")
+        const affordMatch = errText.match(/can only afford (\d+)/i);
+        if (affordMatch && Number(affordMatch[1]) > 100) {
+          effectiveMaxTokens = Math.max(100, Number(affordMatch[1]) - 50);
+          response = await fetch(OPENROUTER_URL, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": process.env.APP_URL || "http://localhost:3000",
+              "X-Title": "Sia AI Autonomous Orchestrator",
+            },
+            body: JSON.stringify({
+              model: currentModel,
+              messages,
+              max_tokens: effectiveMaxTokens,
+              temperature,
+              stream: true,
+            }),
+          });
         }
-        throw new Error(`Model ${currentModel} stream returned ${response.status}: ${errText.slice(0, 200)}`);
+        if (!response.ok) {
+          if (response.status === 402 || response.status === 404 || response.status === 400) {
+            quarantineModel(currentModel, `${response.status}: ${errText.slice(0, 100)}`);
+          }
+          throw new Error(`Model ${currentModel} stream returned ${response.status}: ${errText.slice(0, 200)}`);
+        }
       }
 
       if (!response.body) {
-        throw new Error(`Model ${currentModel} returned no readable stream body`);
+        throw new Error(`Model ${currentModel} returned empty streaming body.`);
       }
 
+      // Stream reader with SSE line parser
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
       let buffer = "";
       let fullContent = "";
       let fullReasoning = "";
-      let inThinkTag = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -121,80 +145,64 @@ async function streamOpenRouterCompletion({
 
         for (const line of lines) {
           const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith("data:")) continue;
-          const dataStr = trimmed.replace(/^data:\s*/, "");
-          if (dataStr === "[DONE]") {
-            if (onChunk) onChunk({ done: true, fullContent, fullReasoning, model: currentModel });
-            return { content: fullContent, reasoning: fullReasoning, model: currentModel };
-          }
+          if (!trimmed || !trimmed.startsWith("data: ")) continue;
+          const jsonStr = trimmed.slice(6);
+          if (jsonStr === "[DONE]") continue;
 
           try {
-            const parsed = JSON.parse(dataStr);
-            const delta = parsed?.choices?.[0]?.delta;
+            const parsed = JSON.parse(jsonStr);
+            const delta = parsed.choices?.[0]?.delta;
             if (!delta) continue;
 
-            // 1. Direct reasoning_content from OpenRouter (DeepSeek R1, Gemini Thinking, Claude 3.7)
-            const reasoningDelta = delta.reasoning_content || delta.reasoning || "";
-            if (reasoningDelta) {
-              fullReasoning += reasoningDelta;
-              if (onChunk) onChunk({ reasoning: reasoningDelta, model: currentModel, done: false });
+            // Extract normal content
+            if (delta.content) {
+              fullContent += delta.content;
+              if (onChunk) onChunk({ type: "token", content: delta.content, model: currentModel });
             }
 
-            // 2. Standard content delta (check for <think> tags)
-            const contentDelta = delta.content || "";
-            if (contentDelta) {
-              if (contentDelta.includes("<think>")) {
-                inThinkTag = true;
-                const parts = contentDelta.split("<think>");
-                if (parts[0]) {
-                  fullContent += parts[0];
-                  if (onChunk) onChunk({ content: parts[0], model: currentModel, done: false });
-                }
-                if (parts[1]) {
-                  fullReasoning += parts[1];
-                  if (onChunk) onChunk({ reasoning: parts[1], model: currentModel, done: false });
-                }
-              } else if (contentDelta.includes("</think>")) {
-                inThinkTag = false;
-                const parts = contentDelta.split("</think>");
-                if (parts[0]) {
-                  fullReasoning += parts[0];
-                  if (onChunk) onChunk({ reasoning: parts[0], model: currentModel, done: false });
-                }
-                if (parts[1]) {
-                  fullContent += parts[1];
-                  if (onChunk) onChunk({ content: parts[1], model: currentModel, done: false });
-                }
-              } else if (inThinkTag) {
-                fullReasoning += contentDelta;
-                if (onChunk) onChunk({ reasoning: contentDelta, model: currentModel, done: false });
-              } else {
-                fullContent += contentDelta;
-                if (onChunk) onChunk({ content: contentDelta, model: currentModel, done: false });
-              }
+            // Extract reasoning content (DeepSeek R1, Claude Thinking, etc.)
+            const reasoning = delta.reasoning_content || delta.reasoning;
+            if (reasoning) {
+              fullReasoning += reasoning;
+              if (onChunk) onChunk({ type: "reasoning", text: reasoning, model: currentModel });
             }
-          } catch (parseErr) {
-            // Partial JSON chunk line, ignore and continue
-          }
+          } catch (_) {}
         }
       }
 
-      if (onChunk) onChunk({ done: true, fullContent, fullReasoning, model: currentModel });
-      return { content: fullContent, reasoning: fullReasoning, model: currentModel };
+      if (onChunk) {
+        onChunk({
+          type: "done",
+          content: fullContent,
+          reasoning: fullReasoning,
+          model: currentModel,
+          done: true,
+        });
+      }
+
+      return {
+        answer: fullContent,
+        reasoning: fullReasoning,
+        model: currentModel,
+      };
     } catch (err) {
-      console.warn(`[OpenRouter Stream] Model ${currentModel} stream failed (${err.message}). Trying failover...`);
+      console.warn(`[OpenRouter Stream] Model ${currentModel} failed (${err.message}). Attempting failover...`);
       lastError = err;
     }
   }
 
-  throw new Error(`All candidate AI models failed to stream. Last error: ${lastError?.message}`);
+  throw new Error(`All candidate AI models failed to stream. Last error: ${lastError?.message || "unknown"}`);
 }
 
 /**
- * Thin wrapper around OpenRouter unified chat completions endpoint
- * with smart health caching & zero-downtime sub-second failover.
+ * Standard non-streaming chat completion.
  */
-async function callOpenRouter({ model, messages, max_tokens = 4096, temperature = 0.7 }) {
+async function callOpenRouter({
+  model,
+  messages,
+  max_tokens = 1200,
+  temperature = 0.7,
+}) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error("Missing OPENROUTER_API_KEY. Add it to your .env file.");
@@ -206,8 +214,9 @@ async function callOpenRouter({ model, messages, max_tokens = 4096, temperature 
   let lastError = null;
 
   for (const currentModel of modelsToTry) {
+    let effectiveMaxTokens = max_tokens;
     try {
-      const response = await fetchWithTimeout(
+      let response = await fetchWithTimeout(
         OPENROUTER_URL,
         {
           method: "POST",
@@ -220,7 +229,7 @@ async function callOpenRouter({ model, messages, max_tokens = 4096, temperature 
           body: JSON.stringify({
             model: currentModel,
             messages,
-            max_tokens,
+            max_tokens: effectiveMaxTokens,
             temperature,
           }),
         },
@@ -229,10 +238,35 @@ async function callOpenRouter({ model, messages, max_tokens = 4096, temperature 
 
       if (!response.ok) {
         const errText = await response.text().catch(() => "");
-        if (response.status === 402 || response.status === 404 || response.status === 400) {
-          quarantineModel(currentModel, `${response.status}: ${errText.slice(0, 100)}`);
+        const affordMatch = errText.match(/can only afford (\d+)/i);
+        if (affordMatch && Number(affordMatch[1]) > 100) {
+          effectiveMaxTokens = Math.max(100, Number(affordMatch[1]) - 50);
+          response = await fetchWithTimeout(
+            OPENROUTER_URL,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${apiKey}`,
+                "Content-Type": "application/json",
+                "HTTP-Referer": process.env.APP_URL || "http://localhost:3000",
+                "X-Title": "Sia AI Autonomous Orchestrator",
+              },
+              body: JSON.stringify({
+                model: currentModel,
+                messages,
+                max_tokens: effectiveMaxTokens,
+                temperature,
+              }),
+            },
+            10000
+          );
         }
-        throw new Error(`Model ${currentModel} returned ${response.status}: ${errText.slice(0, 200)}`);
+        if (!response.ok) {
+          if (response.status === 402 || response.status === 404 || response.status === 400) {
+            quarantineModel(currentModel, `${response.status}: ${errText.slice(0, 100)}`);
+          }
+          throw new Error(`Model ${currentModel} returned ${response.status}: ${errText.slice(0, 200)}`);
+        }
       }
 
       const data = await response.json();
@@ -248,7 +282,7 @@ async function callOpenRouter({ model, messages, max_tokens = 4096, temperature 
     }
   }
 
-  throw new Error(`All candidate AI models failed. Last error: ${lastError?.message}`);
+  throw new Error(`All candidate AI models failed. Last error: ${lastError?.message || "unknown"}`);
 }
 
 /**

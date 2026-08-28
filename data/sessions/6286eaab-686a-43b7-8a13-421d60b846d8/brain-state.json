@@ -1,0 +1,25 @@
+{
+  "current_task": {
+    "id": null,
+    "goal": null,
+    "status": "idle",
+    "started_at": null
+  },
+  "plan": [],
+  "decisions_log": [],
+  "chat_summary": "",
+  "recent_messages": [
+    {
+      "role": "user",
+      "content": "Confirm system health in 5 words.",
+      "at": "2026-08-28T18:44:45.965Z"
+    },
+    {
+      "role": "assistant",
+      "content": "System is healthy and operational.",
+      "at": "2026-08-28T18:44:45.980Z"
+    }
+  ],
+  "blockers": [],
+  "last_updated": "2026-08-28T18:44:45.981Z"
+}

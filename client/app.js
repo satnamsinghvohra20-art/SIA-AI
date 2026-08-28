@@ -928,7 +928,7 @@ if (SpeechRecognition) {
     lastSpokenText = currentText;
 
     if (isLiveModeActive) {
-      handleLiveSpeechResult(currentText);
+      handleLiveSpeechResult(currentText, Boolean(final));
     } else {
       input.value = currentText;
       if (silenceTimer) clearTimeout(silenceTimer);
@@ -938,7 +938,7 @@ if (SpeechRecognition) {
             stopListening();
             composer.dispatchEvent(new Event("submit", { cancelable: true }));
           }
-        }, 1500);
+        }, 800);
       }
     }
   };
@@ -1116,24 +1116,14 @@ async function startMicVisualizer() {
         sum += dataArray[i];
       }
       const avg = sum / bufferLength;
-      isUserActivelySpeaking = avg > 14;
+      isUserActivelySpeaking = avg > 20;
 
-      // Instant Barge-In: if user speaks while assistant is speaking, cut audio immediately
+      // Instant Barge-In: if user speaks loudly while assistant is speaking, cut audio immediately
       if (isUserActivelySpeaking && liveState === "SPEAKING") {
         playChime("interrupt");
         stopSpeaking(false);
         setLiveState("LISTENING");
         liveAssistantCaption.textContent = "Listening to you, sir...";
-      }
-
-      // If user is vocalizing, prolong silence timer dynamically
-      if (isUserActivelySpeaking && silenceTimer && isLiveModeActive && liveState === "LISTENING") {
-        clearTimeout(silenceTimer);
-        silenceTimer = setTimeout(() => {
-          if (isLiveModeActive && !isLiveMuted && lastSpokenText && lastSpokenText.trim().length > 0) {
-            dispatchLiveConversation(lastSpokenText.trim());
-          }
-        }, 1200);
       }
 
       liveAnimFrame = requestAnimationFrame(checkEnergy);
@@ -1174,8 +1164,8 @@ function setLiveState(state, message = "") {
   }
 }
 
-function handleLiveSpeechResult(text) {
-  if (!text) return;
+function handleLiveSpeechResult(text, isFinal = false) {
+  if (!text || text.trim().length === 0) return;
   liveUserCaption.textContent = `"${text}"`;
 
   // Natural voice interruption: if assistant is currently speaking when user starts talking, stop audio immediately
@@ -1185,35 +1175,19 @@ function handleLiveSpeechResult(text) {
     setLiveState("LISTENING");
   }
 
-  // Wake-word detection ("Sia", "Hey Sia", "Hi Sia", "Ok Sia", "Jarvis", "Hey Jarvis", "See ya", "Shia")
-  const lower = text.toLowerCase().trim();
-  const isWakeWord =
-    lower.startsWith("sia") ||
-    lower.startsWith("hey sia") ||
-    lower.startsWith("hi sia") ||
-    lower.startsWith("ok sia") ||
-    lower.startsWith("seeya") ||
-    lower.startsWith("see ya") ||
-    lower.startsWith("shia") ||
-    lower.startsWith("sierra") ||
-    lower.startsWith("jarvis") ||
-    lower.startsWith("hey jarvis");
-
-  if (isWakeWord) {
-    playChime("start");
-  }
-
   // Clear previous timer
   if (silenceTimer) {
     clearTimeout(silenceTimer);
+    silenceTimer = null;
   }
 
-  // Listens carefully to your FULL command without interrupting (1500ms natural pause buffer)
+  // Snappy pause detection: 700ms after final sentence or 1000ms after interim speech
+  const pauseDuration = isFinal ? 700 : 1000;
   silenceTimer = setTimeout(() => {
-    if (isLiveModeActive && !isLiveMuted && text.trim().length > 0) {
+    if (isLiveModeActive && !isLiveMuted && text.trim().length > 0 && liveState === "LISTENING") {
       dispatchLiveConversation(text.trim());
     }
-  }, 1500);
+  }, pauseDuration);
 }
 
 function cleanWakePrefix(raw) {
@@ -1245,7 +1219,7 @@ async function dispatchLiveConversation(spokenText) {
 
   setLiveState("THINKING");
   liveUserCaption.textContent = `"${spokenText}"`;
-  liveAssistantCaption.textContent = "Processing instruction, sir...";
+  liveAssistantCaption.textContent = "Executing instruction, sir...";
 
   // Add to background chat window history
   addUserMessage(spokenText);
@@ -1278,6 +1252,17 @@ async function dispatchLiveConversation(spokenText) {
         setTimeout(() => startListening(), 1200);
       }
       return;
+    }
+
+    // Launch any opened URLs / action results directly in client
+    if (Array.isArray(data.steps)) {
+      for (const step of data.steps) {
+        const r = step.result?.result || step.result;
+        const url = r?.url || r?.openedUrl;
+        if (url) {
+          try { window.open(url, "_blank"); } catch (_) {}
+        }
+      }
     }
 
     // Update model badge with routed agent info

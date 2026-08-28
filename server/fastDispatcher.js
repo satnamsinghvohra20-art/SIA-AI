@@ -36,7 +36,22 @@ function cleanCommand(text) {
 async function executeSingleIntent(text) {
   if (!text) return null;
 
-  // 1. "play <song/video> on youtube / spotify"
+  // 1. "open <app> and (place order for|order|buy|purchase|search|find|play) <item>"
+  const openAndActionMatch = text.match(/^(?:open|launch|go to)\s+(flipkart|amazon|swiggy|zomato|myntra|blinkit|zepto|youtube|spotify|google|chrome|edge|whatsapp)\s+and\s+(?:place\s+order\s+for|order|buy|purchase|shop\s+for|search(?:\s+for)?|find|look\s+up|play)\s+(.+)$/i);
+  if (openAndActionMatch) {
+    const platform = openAndActionMatch[1].toLowerCase();
+    const item = openAndActionMatch[2].trim();
+    const res = await system.openApp({ app: platform, query: item });
+    const prettyPlatform = platform.charAt(0).toUpperCase() + platform.slice(1);
+    return {
+      action: "open_app",
+      params: { app: platform, query: item },
+      summary: `Opened ${prettyPlatform} with ${item} ready on screen`,
+      result: res,
+    };
+  }
+
+  // 2. "play <song/video> on youtube / spotify"
   const playMatch = text.match(/^(?:play|listen to)\s+(.+?)(?:\s+on\s+(youtube|spotify))?$/i);
   if (playMatch) {
     const query = playMatch[1].trim();
@@ -50,8 +65,8 @@ async function executeSingleIntent(text) {
     };
   }
 
-  // 2. "order/buy/purchase <item> on flipkart/amazon" or "order/buy <item>"
-  const buyMatch = text.match(/^(?:order|buy|purchase|shop\s+for)\s+(.+?)(?:\s+(?:on|from|in)\s+(flipkart|amazon|swiggy|zomato|myntra|blinkit|zepto))?$/i);
+  // 3. "order/buy/purchase/place order for <item> on flipkart/amazon" or "order/buy <item>"
+  const buyMatch = text.match(/^(?:place\s+order\s+for|order|buy|purchase|shop\s+for)\s+(.+?)(?:\s+(?:on|from|in)\s+(flipkart|amazon|swiggy|zomato|myntra|blinkit|zepto))?$/i);
   if (buyMatch) {
     const item = buyMatch[1].trim();
     const platform = (buyMatch[2] || "flipkart").toLowerCase();
@@ -65,7 +80,7 @@ async function executeSingleIntent(text) {
     };
   }
 
-  // 2. "search for <query> on <engine/site>" or "search <query>" or "google <query>"
+  // 4. "search for <query> on <engine/site>" or "search <query>" or "google <query>"
   const searchMatch = text.match(/^(?:search(?:\s+for)?|google|look up|find)\s+(.+?)(?:\s+(?:on|in)\s+(google|youtube|amazon|flipkart|wikipedia|reddit))?$/i);
   if (searchMatch && !text.startsWith("search web for news")) {
     const query = searchMatch[1].trim();
@@ -86,7 +101,7 @@ async function executeSingleIntent(text) {
     };
   }
 
-  // 3. "open <app> and write/send <message>" or "send whatsapp to <person> <message>"
+  // 5. "open <app> and write/send <message>" or "send whatsapp to <person> <message>"
   const waMatch = text.match(/^(?:send\s+whatsapp(?:\s+to)?|open\s+whatsapp\s+and\s+(?:send|write|type))\s+([a-zA-Z0-9\s+]+?)(?:\s+(?:message|msg|text|that)?\s*[:,-]?\s*(.+))?$/i);
   if (waMatch) {
     const to = waMatch[1].trim();
@@ -100,8 +115,8 @@ async function executeSingleIntent(text) {
     };
   }
 
-  // 4. "open / launch / switch to <app>"
-  const openMatch = text.match(/^(?:open|launch|switch to|start|bring up|go to)\s+([a-zA-Z0-9.\s]+?)(?:\s+(?:and|with)\s+(?:search|query|play)\s+(.+))?$/i);
+  // 6. "open / launch / switch to <app>"
+  const openMatch = text.match(/^(?:open|launch|switch to|start|bring up|go to)\s+([a-zA-Z0-9.\s]+?)(?:\s+(?:and|with)\s+(?:search|query|play|order|buy)\s+(.+))?$/i);
   if (openMatch) {
     const rawApp = openMatch[1].trim();
     const query = openMatch[2] ? openMatch[2].trim() : undefined;
@@ -112,7 +127,9 @@ async function executeSingleIntent(text) {
       const prettyApp = rawApp.charAt(0).toUpperCase() + rawApp.slice(1);
       const summary = res?.reused
         ? `Switched to active ${prettyApp}`
-        : `Opened ${prettyApp}`;
+        : query
+          ? `Opened ${prettyApp} with ${query}`
+          : `Opened ${prettyApp}`;
       return {
         action: "open_app",
         params: { app: rawApp, query },
