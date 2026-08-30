@@ -1254,16 +1254,7 @@ async function dispatchLiveConversation(spokenText) {
       return;
     }
 
-    // Launch any opened URLs / action results directly in client
-    if (Array.isArray(data.steps)) {
-      for (const step of data.steps) {
-        const r = step.result?.result || step.result;
-        const url = r?.url || r?.openedUrl;
-        if (url) {
-          try { window.open(url, "_blank"); } catch (_) {}
-        }
-      }
-    }
+    // Action steps handled directly on host system by Sia orchestrator
 
     // Update model badge with routed agent info
     if (data.routing) {
@@ -1757,9 +1748,7 @@ function addAssistantMessage(answer, routing, shouldSpeak = true, steps = []) {
           name: res.opened || res.to || "Web Application",
           url: url,
         });
-        try {
-          window.open(url, "_blank");
-        } catch (_) {}
+        // Action URL recorded for UI card preview without duplicate opening
       }
     }
   }
@@ -2002,16 +1991,7 @@ composer.addEventListener("submit", async (e) => {
           bubbleText.innerHTML = `${formatMarkdown(accumulatedContent)}<span class="streaming-cursor"></span>`;
           scrollToBottom();
         } else if (eventName === "steps") {
-          // Action urls
-          if (Array.isArray(eventData.steps)) {
-            for (const s of eventData.steps) {
-              const res = s.result?.result || s.result;
-              const url = res?.url || res?.openedUrl;
-              if (url) {
-                try { window.open(url, "_blank"); } catch (_) {}
-              }
-            }
-          }
+          // Action steps logged
         } else if (eventName === "done") {
           accumulatedContent = eventData.answer || accumulatedContent;
           bubbleText.innerHTML = formatMarkdown(accumulatedContent);

@@ -139,6 +139,7 @@ async function stepLoop(task, { onStep = null } = {}) {
     // confirmPending) rather than skipped outright, but it still must not
     // block the OTHER calls in the same batch from getting their results.
     const pendingConfirmations = [];
+    const executedThisTurn = new Map();
 
     for (const call of calls) {
       console.log(`[DeviceAgent] Model requested tool: ${call.name}`);
@@ -146,9 +147,6 @@ async function stepLoop(task, { onStep = null } = {}) {
       console.log(`[DeviceAgent] Arguments: ${call.argsError ? "(unparsable)" : JSON.stringify(call.args)}`);
 
       if (call.argsError) {
-        // Malformed arguments: still respond with the exact call.id rather
-        // than dropping it — an unresolved id is exactly what reproduces
-        // "No tool output found for function call".
         const result = { ok: false, error: `Malformed tool arguments: ${call.argsError}` };
         task.messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
         const entry = { type: "action", action: call.name, params: null, result };
@@ -159,20 +157,23 @@ async function stepLoop(task, { onStep = null } = {}) {
         continue;
       }
 
+      const dedupeKey = `${call.name}:${JSON.stringify(call.args || {})}`;
       let result;
-      try {
-        result = await executeAction(call.name, call.args, { confirmed: false, sessionId: task.sessionId });
-      } catch (err) {
-        // executeAction already catches handler errors internally, but this
-        // is a second safety net so a call can NEVER go unanswered even if
-        // something throws somewhere unexpected.
-        result = { ok: false, error: err.message };
+
+      if (executedThisTurn.has(dedupeKey)) {
+        // Reuse identical execution result to prevent double action executions
+        result = executedThisTurn.get(dedupeKey);
+        console.log(`[DeviceAgent] Reusing previous execution result for identical parallel call ${call.name}`);
+      } else {
+        try {
+          result = await executeAction(call.name, call.args, { confirmed: false, sessionId: task.sessionId });
+        } catch (err) {
+          result = { ok: false, error: err.message };
+        }
+        executedThisTurn.set(dedupeKey, result);
       }
 
       if (result.needsConfirmation) {
-        // Deliberately no tool message pushed yet for this one — the two-
-        // phase design (pause now, confirmPending() fills in the result
-        // later) relies on NOT calling the model again until it's answered.
         pendingConfirmations.push({ call, result });
         continue;
       }

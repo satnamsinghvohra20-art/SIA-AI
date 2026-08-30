@@ -220,28 +220,39 @@ async function tryFastDispatch(rawText) {
   const text = cleanCommand(rawText);
   if (!text) return { matched: false };
 
-  const clauses = splitCompoundClauses(text);
-
-  // Single intent execution
-  if (clauses.length === 1) {
-    const single = await executeSingleIntent(clauses[0]);
-    if (!single) return { matched: false };
+  // 1. Try single intent on full text first (prevents "open youtube and play song" from splitting into 2 open actions)
+  const directMatch = await executeSingleIntent(text);
+  if (directMatch) {
     return {
       matched: true,
-      answer: `${single.summary}, sir.`,
-      result: single.result,
-      steps: [{ action: single.action, params: single.params, result: single.result }],
+      answer: `${directMatch.summary}, sir.`,
+      result: directMatch.result,
+      steps: [{ action: directMatch.action, params: directMatch.params, result: directMatch.result }],
       category: "device_control",
     };
   }
 
-  // Compound multi-intent execution
+  // 2. Try compound multi-intent splitting (e.g. "open youtube and play lo-fi and then mute volume")
+  const clauses = splitCompoundClauses(text);
+  if (clauses.length <= 1) {
+    return { matched: false };
+  }
+
   const executedSteps = [];
   const summaries = [];
+  const openedApps = new Set();
 
   for (const clause of clauses) {
     const res = await executeSingleIntent(clause);
     if (res) {
+      // Prevent launching the exact same app twice in one compound command
+      if (res.action === "open_app" && res.params?.app) {
+        const appKey = res.params.app.toLowerCase();
+        if (openedApps.has(appKey) && !res.params.query) {
+          continue;
+        }
+        openedApps.add(appKey);
+      }
       executedSteps.push({ action: res.action, params: res.params, result: res.result });
       summaries.push(res.summary);
     }
