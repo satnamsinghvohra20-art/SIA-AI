@@ -1,0 +1,25 @@
+{
+  "current_task": {
+    "id": null,
+    "goal": null,
+    "status": "idle",
+    "started_at": null
+  },
+  "plan": [],
+  "decisions_log": [],
+  "chat_summary": "",
+  "recent_messages": [
+    {
+      "role": "user",
+      "content": "call 9876543210",
+      "at": "2026-08-30T14:33:00.162Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Dialing 9876543210, sir.",
+      "at": "2026-08-30T14:33:00.165Z"
+    }
+  ],
+  "blockers": [],
+  "last_updated": "2026-08-30T14:33:00.165Z"
+}

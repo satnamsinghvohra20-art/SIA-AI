@@ -1,0 +1,25 @@
+{
+  "current_task": {
+    "id": null,
+    "goal": null,
+    "status": "idle",
+    "started_at": null
+  },
+  "plan": [],
+  "decisions_log": [],
+  "chat_summary": "",
+  "recent_messages": [
+    {
+      "role": "user",
+      "content": "Hey Sia, open YouTube",
+      "at": "2026-08-30T14:32:50.541Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Opened Youtube, sir.",
+      "at": "2026-08-30T14:32:50.550Z"
+    }
+  ],
+  "blockers": [],
+  "last_updated": "2026-08-30T14:32:50.550Z"
+}

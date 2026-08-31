@@ -97,8 +97,9 @@ async function streamOpenRouterCompletion({
         const errText = await response.text().catch(() => "");
         // Check for affordable tokens in 402 error (e.g. "can only afford 1687")
         const affordMatch = errText.match(/can only afford (\d+)/i);
-        if (affordMatch && Number(affordMatch[1]) > 100) {
-          effectiveMaxTokens = Math.max(100, Number(affordMatch[1]) - 50);
+        if (affordMatch && Number(affordMatch[1]) > 50) {
+          effectiveMaxTokens = Math.max(50, Number(affordMatch[1]) - 20);
+          console.log(`[OpenRouter Stream] Adapting max_tokens to ${effectiveMaxTokens} for ${currentModel}`);
           response = await fetch(OPENROUTER_URL, {
             method: "POST",
             headers: {
@@ -117,7 +118,7 @@ async function streamOpenRouterCompletion({
           });
         }
         if (!response.ok) {
-          if (response.status === 402 || response.status === 404 || response.status === 400) {
+          if (response.status === 404 || response.status === 410) {
             quarantineModel(currentModel, `${response.status}: ${errText.slice(0, 100)}`);
           }
           throw new Error(`Model ${currentModel} stream returned ${response.status}: ${errText.slice(0, 200)}`);
@@ -239,8 +240,9 @@ async function callOpenRouter({
       if (!response.ok) {
         const errText = await response.text().catch(() => "");
         const affordMatch = errText.match(/can only afford (\d+)/i);
-        if (affordMatch && Number(affordMatch[1]) > 100) {
-          effectiveMaxTokens = Math.max(100, Number(affordMatch[1]) - 50);
+        if (affordMatch && Number(affordMatch[1]) > 50) {
+          effectiveMaxTokens = Math.max(50, Number(affordMatch[1]) - 20);
+          console.log(`[OpenRouter] Adapting max_tokens to ${effectiveMaxTokens} for ${currentModel}`);
           response = await fetchWithTimeout(
             OPENROUTER_URL,
             {
@@ -262,7 +264,8 @@ async function callOpenRouter({
           );
         }
         if (!response.ok) {
-          if (response.status === 402 || response.status === 404 || response.status === 400) {
+          // Only quarantine if model is permanently deleted/unavailable (404/410), never for credit/token limit (402)
+          if (response.status === 404 || response.status === 410) {
             quarantineModel(currentModel, `${response.status}: ${errText.slice(0, 100)}`);
           }
           throw new Error(`Model ${currentModel} returned ${response.status}: ${errText.slice(0, 200)}`);

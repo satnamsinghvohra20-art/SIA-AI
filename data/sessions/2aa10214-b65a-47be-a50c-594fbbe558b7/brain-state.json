@@ -1,0 +1,25 @@
+{
+  "current_task": {
+    "id": null,
+    "goal": null,
+    "status": "idle",
+    "started_at": null
+  },
+  "plan": [],
+  "decisions_log": [],
+  "chat_summary": "",
+  "recent_messages": [
+    {
+      "role": "user",
+      "content": "mute volume",
+      "at": "2026-08-30T14:32:51.647Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Muted volume, sir.",
+      "at": "2026-08-30T14:32:51.653Z"
+    }
+  ],
+  "blockers": [],
+  "last_updated": "2026-08-30T14:32:51.654Z"
+}
