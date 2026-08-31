@@ -2372,3 +2372,65 @@ if (deviceForm) {
 if (deviceCloseBtn) {
   deviceCloseBtn.addEventListener("click", () => stopDeviceListening());
 }
+
+// ============================================================
+// Starter Action Chips Handler
+// ============================================================
+document.addEventListener("click", (e) => {
+  const chip = e.target.closest(".starter-chip");
+  if (!chip) return;
+  const promptText = chip.dataset.prompt;
+  if (!promptText || !input) return;
+  input.value = promptText;
+  input.focus();
+  if (form) form.requestSubmit();
+});
+
+// ============================================================
+// Global Keyboard Shortcuts (Ctrl+K, Ctrl+M, Escape, Ctrl+Enter)
+// ============================================================
+window.addEventListener("keydown", (e) => {
+  // Ctrl+K / Cmd+K / /: Focus chat input
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    if (input) input.focus();
+  }
+  // Ctrl+M / Cmd+M: Toggle Sia Live Voice
+  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") {
+    e.preventDefault();
+    if (isLiveModeActive) closeLiveMode();
+    else openLiveMode();
+  }
+  // Escape: Close all open modals & stop speech
+  else if (e.key === "Escape") {
+    stopSpeaking(false);
+    if (isLiveModeActive) closeLiveMode();
+    if (knowledgeOverlay) knowledgeOverlay.hidden = true;
+    if (modelsOverlay) modelsOverlay.hidden = true;
+    if (deviceOverlay) deviceOverlay.hidden = true;
+  }
+});
+
+// ============================================================
+// Code Block Copy Button Delegation
+// ============================================================
+document.addEventListener("click", async (e) => {
+  const copyBtn = e.target.closest(".copy-code-btn");
+  if (!copyBtn) return;
+  const codeWrapper = copyBtn.closest(".code-wrapper");
+  const codeEl = codeWrapper ? codeWrapper.querySelector("pre code") : null;
+  if (!codeEl) return;
+
+  try {
+    await navigator.clipboard.writeText(codeEl.innerText);
+    copyBtn.textContent = "Copied! ✅";
+    copyBtn.classList.add("copied");
+    setTimeout(() => {
+      copyBtn.textContent = "Copy";
+      copyBtn.classList.remove("copied");
+    }, 2000);
+  } catch (err) {
+    console.warn("Clipboard write failed:", err);
+  }
+});
+

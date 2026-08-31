@@ -1,0 +1,19 @@
+{
+  "current_task": {
+    "id": null,
+    "goal": null,
+    "status": "idle",
+    "started_at": null
+  },
+  "plan": [],
+  "decisions_log": [],
+  "chat_summary": "",
+  "recent_messages": [],
+  "blockers": [
+    {
+      "at": "2026-08-31T08:53:39.879Z",
+      "issue": "/api/chat failed: All candidate AI models failed. Last error: Model meta-llama/llama-3.3-70b-instruct returned 402: {\"error\":{\"message\":\"Insufficient credits. This account never purchased credits. Make sure your key is on the correct account or org, and if so, purchase more at https://openrouter.ai/settings/credits"
+    }
+  ],
+  "last_updated": "2026-08-31T08:53:39.879Z"
+}

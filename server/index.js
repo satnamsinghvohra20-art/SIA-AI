@@ -614,6 +614,20 @@ app.post("/api/tts", async (req, res) => {
   }
 });
 
+// --- System Health & Diagnostics ---
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "healthy",
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+    memoryUsageMB: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+    modelsCatalogTotal: 470,
+    version: "2.5.0",
+    platform: process.platform,
+    arch: process.arch,
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 const httpServer = app.listen(PORT, () => {
   console.log(`Sia orchestrator running at http://localhost:${PORT}`);
@@ -636,3 +650,16 @@ const httpServer = app.listen(PORT, () => {
 
 // Android companion app connects here: ws://<host>:<port>/ws/mobile?token=...&sessionId=...
 mobileBridge.attach(httpServer);
+
+// Graceful shutdown handling
+function handleShutdown(signal) {
+  console.log(`\n[Sia] Received ${signal}. Shutting down gracefully...`);
+  httpServer.close(() => {
+    console.log("[Sia] Server closed cleanly.");
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(0), 3000);
+}
+
+process.on("SIGINT", () => handleShutdown("SIGINT"));
+process.on("SIGTERM", () => handleShutdown("SIGTERM"));

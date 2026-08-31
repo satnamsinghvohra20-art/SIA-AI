@@ -8,6 +8,8 @@ const FALLBACK_MODELS = [
   "anthropic/claude-sonnet-5",
   "anthropic/claude-haiku-4.5",
   "meta-llama/llama-3.3-70b-instruct",
+  "openrouter/free",
+  "nvidia/nemotron-3-super-120b-a12b:free",
 ];
 
 const FALLBACK_TOOL_MODELS = [
@@ -16,6 +18,7 @@ const FALLBACK_TOOL_MODELS = [
   "google/gemini-2.5-flash",
   "anthropic/claude-sonnet-5",
   "anthropic/claude-haiku-4.5",
+  "openrouter/free",
 ];
 
 const DEFAULT_MAX_TOKENS = 500;
