@@ -2,7 +2,7 @@ const system = require("./handlers/system");
 const { callOpenRouter } = require("../openrouterClient");
 const fs = require("fs/promises");
 
-const VISION_MODEL = "google/gemini-2.0-flash-001";
+const VISION_MODEL = "google/gemini-2.5-flash";
 
 /**
  * VISION GROUNDING AGENT
