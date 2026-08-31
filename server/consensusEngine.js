@@ -2,12 +2,12 @@ const { callOpenRouter } = require("./openrouterClient");
 const siaIdentity = require("./siaIdentity");
 
 const COUNCIL_MODELS = [
-  { id: "anthropic/claude-sonnet-5", label: "Claude Sonnet 5", specialty: "Nuance, Architecture & Depth" },
-  { id: "deepseek/deepseek-r1", label: "DeepSeek R1", specialty: "First-Principles Reasoning & STEM" },
-  { id: "openai/gpt-5.4-mini", label: "GPT-5.4 Mini", specialty: "Omni Knowledge & Pragmatism" },
+  { id: "openai/gpt-4o-mini", label: "GPT-4o Mini", specialty: "Omni Knowledge & Pragmatism" },
+  { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", specialty: "Speed, Logic & Code Context" },
+  { id: "deepseek/deepseek-chat", label: "DeepSeek V3", specialty: "First-Principles Reasoning & STEM" },
 ];
 
-const SYNTHESIS_MODEL = "openai/gpt-5.4-mini";
+const SYNTHESIS_MODEL = "openai/gpt-4o-mini";
 
 /**
  * Runs multi-model consensus deliberation.
@@ -23,16 +23,16 @@ async function runCouncilConsensus({ message, history = [], onProgress }) {
       const promptMessages = [
         {
           role: "system",
-          content: `You are an elite expert advisor in a multi-model council. Provide your deepest, most rigorous, and independent perspective on the user's inquiry. Focus on your strength (${specialty}). Be concise and insightful.`,
+          content: `You are an elite expert advisor in a multi-model council. Provide your deepest, most rigorous, and independent perspective on the user's inquiry. Focus on your strength (${specialty}). Be concise and insightful (under 120 words).`,
         },
-        ...history.slice(-6),
+        ...history.slice(-4),
         { role: "user", content: message },
       ];
 
       const response = await callOpenRouter({
         model: id,
         messages: promptMessages,
-        max_tokens: 2048,
+        max_tokens: 350,
         temperature: 0.5,
       });
 
@@ -78,7 +78,7 @@ Address the user respectfully as "sir". Keep formatting sharp, elegant, and high
   const masterAnswer = await callOpenRouter({
     model: SYNTHESIS_MODEL,
     messages: [{ role: "user", content: synthesisPrompt }],
-    max_tokens: 3000,
+    max_tokens: 500,
     temperature: 0.4,
   });
 

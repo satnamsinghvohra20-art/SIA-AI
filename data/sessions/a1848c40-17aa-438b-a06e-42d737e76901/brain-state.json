@@ -1,0 +1,24 @@
+{
+  "current_task": {
+    "id": null,
+    "goal": null,
+    "status": "idle",
+    "started_at": null
+  },
+  "plan": [],
+  "decisions_log": [],
+  "chat_summary": "",
+  "recent_messages": [
+    {
+      "role": "user",
+      "content": "Give a 3-word status check.",
+      "at": "2026-08-31T07:03:08.302Z"
+    },
+    {
+      "role": "assistant",
+      "at": "2026-08-31T07:03:08.306Z"
+    }
+  ],
+  "blockers": [],
+  "last_updated": "2026-08-31T07:03:08.306Z"
+}

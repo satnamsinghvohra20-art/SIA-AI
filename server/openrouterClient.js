@@ -2,19 +2,23 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 const FALLBACK_MODELS = [
   "openai/gpt-4o-mini",
-  "openai/gpt-5.4-mini",
-  "deepseek/deepseek-chat",
-  "meta-llama/llama-3.3-70b-instruct",
   "google/gemini-2.5-flash",
-  "qwen/qwen-2.5-72b-instruct",
+  "deepseek/deepseek-chat",
+  "openai/gpt-5.4-mini",
+  "anthropic/claude-sonnet-5",
+  "anthropic/claude-haiku-4.5",
+  "meta-llama/llama-3.3-70b-instruct",
 ];
 
 const FALLBACK_TOOL_MODELS = [
   "openai/gpt-4o-mini",
   "openai/gpt-5.4-mini",
-  "deepseek/deepseek-chat",
   "google/gemini-2.5-flash",
+  "anthropic/claude-sonnet-5",
+  "anthropic/claude-haiku-4.5",
 ];
+
+const DEFAULT_MAX_TOKENS = 500;
 
 // In-memory cache for quarantined / broken models (30 min TTL)
 const deadModelCache = new Map(); // modelName -> timestamp of expiration
@@ -59,7 +63,7 @@ async function fetchWithTimeout(url, options, timeoutMs = 8000) {
 async function streamOpenRouterCompletion({
   model,
   messages,
-  max_tokens = 1200,
+  max_tokens = 500,
   temperature = 0.7,
   onChunk,
 }) {
@@ -201,7 +205,7 @@ async function streamOpenRouterCompletion({
 async function callOpenRouter({
   model,
   messages,
-  max_tokens = 1200,
+  max_tokens = 500,
   temperature = 0.7,
 }) {
   const apiKey = process.env.OPENROUTER_API_KEY;

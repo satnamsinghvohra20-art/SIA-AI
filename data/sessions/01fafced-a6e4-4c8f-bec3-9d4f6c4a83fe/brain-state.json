@@ -1,0 +1,19 @@
+{
+  "current_task": {
+    "id": null,
+    "goal": null,
+    "status": "idle",
+    "started_at": null
+  },
+  "plan": [],
+  "decisions_log": [],
+  "chat_summary": "",
+  "recent_messages": [],
+  "blockers": [
+    {
+      "at": "2026-08-31T07:04:45.676Z",
+      "issue": "/api/chat failed: All candidate AI models failed. Last error: Model qwen/qwen-2.5-72b-instruct returned 402: {\"error\":{\"message\":\"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.\",\"code\":402,\"metadata\":{\"reason\":\"in"
+    }
+  ],
+  "last_updated": "2026-08-31T07:04:45.676Z"
+}

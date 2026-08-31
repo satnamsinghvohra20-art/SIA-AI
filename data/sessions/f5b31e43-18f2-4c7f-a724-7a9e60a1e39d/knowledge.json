@@ -1,0 +1,65 @@
+{
+  "user": {
+    "name": "Sir",
+    "preferences": {
+      "music": "interstellar theme"
+    },
+    "interests": []
+  },
+  "contacts": {
+    "anuj": "WhatsApp",
+    "alex": "WhatsApp"
+  },
+  "projects": {},
+  "facts": [
+    {
+      "id": "fact_1787941497308_gyee",
+      "category": "preference",
+      "text": "cyberpunk_dark",
+      "created_at": "2026-08-28T18:24:57.308Z"
+    },
+    {
+      "id": "fact_1787941523871_7tbu",
+      "category": "preference",
+      "text": "cyberpunk_dark",
+      "created_at": "2026-08-28T18:25:23.871Z"
+    },
+    {
+      "id": "fact_1787942749578_j853",
+      "category": "extracted",
+      "text": "TypeScript is usually worth it for large codebases because it reduces bugs, improves refactoring safety, and makes collaboration far easier through explicit contracts and stronger tooling.",
+      "created_at": "2026-08-28T18:45:49.578Z"
+    },
+    {
+      "id": "fact_1787942810123_5p8b",
+      "category": "extracted",
+      "text": "User placed an order for an iPhone 15 on Flipkart.",
+      "created_at": "2026-08-28T18:46:50.123Z"
+    },
+    {
+      "id": "fact_1787943689922_svoe",
+      "category": "extracted",
+      "text": "User placed an order for an iPhone 15 in black color on Flipkart.",
+      "created_at": "2026-08-28T19:01:29.922Z"
+    },
+    {
+      "id": "fact_1788012841910_q8rr",
+      "category": "extracted",
+      "text": "User encountered a green screen issue on Flipkart while attempting to place an order for the iPhone 15.",
+      "created_at": "2026-08-29T14:14:01.910Z"
+    },
+    {
+      "id": "fact_1788012963581_mjoz",
+      "category": "general",
+      "text": "I love you",
+      "created_at": "2026-08-29T14:16:03.584Z"
+    },
+    {
+      "id": "fact_1788159927113_k1ep",
+      "category": "extracted",
+      "text": "A monolithic architecture is generally the better choice for early-stage startups due to its simplicity, faster development cycles, and lower operational overhead.",
+      "created_at": "2026-08-31T07:05:27.113Z"
+    }
+  ],
+  "last_updated": "2026-08-31T08:35:59.019Z"
+}
