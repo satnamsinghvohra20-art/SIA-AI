@@ -1,14 +1,11 @@
 {
   "user": {
     "name": "Sir",
-    "preferences": {
-      "music": "interstellar theme"
-    },
+    "preferences": {},
     "interests": []
   },
   "contacts": {
-    "anuj": "WhatsApp",
-    "alex": "WhatsApp"
+    "anuj": "WhatsApp"
   },
   "projects": {},
   "facts": [
@@ -55,11 +52,11 @@
       "created_at": "2026-08-29T14:16:03.584Z"
     },
     {
-      "id": "fact_1788159927113_k1ep",
+      "id": "fact_1788429893994_q83m",
       "category": "extracted",
-      "text": "A monolithic architecture is generally the better choice for early-stage startups due to its simplicity, faster development cycles, and lower operational overhead.",
-      "created_at": "2026-08-31T07:05:27.113Z"
+      "text": "User prefers to communicate with Anuj in Hebrew.",
+      "created_at": "2026-09-03T10:04:53.994Z"
     }
   ],
-  "last_updated": "2026-08-31T08:37:43.780Z"
+  "last_updated": "2026-09-03T10:04:53.995Z"
 }
