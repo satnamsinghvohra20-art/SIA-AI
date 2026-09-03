@@ -1,0 +1,25 @@
+{
+  "current_task": {
+    "id": null,
+    "goal": null,
+    "status": "idle",
+    "started_at": null
+  },
+  "plan": [],
+  "decisions_log": [],
+  "chat_summary": "",
+  "recent_messages": [
+    {
+      "role": "user",
+      "content": "open youtube and play interstellar soundtrack",
+      "at": "2026-09-03T10:56:21.459Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Opened Youtube with interstellar soundtrack ready on screen, sir.",
+      "at": "2026-09-03T10:56:21.463Z"
+    }
+  ],
+  "blockers": [],
+  "last_updated": "2026-09-03T10:56:21.463Z"
+}

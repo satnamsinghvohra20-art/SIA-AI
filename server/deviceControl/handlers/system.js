@@ -186,7 +186,8 @@ function launchDetached(cmd, args = []) {
       const child = spawn(cmd, args, {
         detached: true,
         stdio: "ignore",
-        windowsHide: true,
+        windowsHide: false,
+        shell: PLATFORM === "win32",
       });
       child.unref();
       setTimeout(resolve, 150);
@@ -218,8 +219,13 @@ async function openUrl({ url, browser = "default" }) {
   }
 
   if (PLATFORM === "win32") {
-    // Single clean launch using default shell association
-    await launchDetached("cmd.exe", ["/c", "start", "", fullUrl]);
+    // Single clean launch using Start-Process
+    await launchDetached("powershell.exe", [
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      `Start-Process "${fullUrl.replace(/"/g, '`"')}"`,
+    ]);
   } else if (PLATFORM === "darwin") {
     if (b.includes("chrome")) {
       await launchDetached("open", ["-a", "Google Chrome", fullUrl]);
@@ -512,7 +518,12 @@ if ($p) {
       if (PLATFORM === "darwin") {
         await launchDetached("open", ["-a", desktopTarget]);
       } else if (PLATFORM === "win32") {
-        await launchDetached("cmd.exe", ["/c", "start", "", desktopTarget]);
+        await launchDetached("powershell.exe", [
+          "-NoProfile",
+          "-NonInteractive",
+          "-Command",
+          `Start-Process "${desktopTarget}"`,
+        ]);
       } else {
         await launchDetached(desktopTarget, []);
       }
@@ -525,7 +536,12 @@ if ($p) {
   // 6. Last attempt: try generic start in Windows or search on Google
   if (PLATFORM === "win32") {
     try {
-      await launchDetached("cmd.exe", ["/c", "start", "", name]);
+      await launchDetached("powershell.exe", [
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        `Start-Process "${name}"`,
+      ]);
       return { opened: app, mode: "system_start" };
     } catch (_) {}
   }

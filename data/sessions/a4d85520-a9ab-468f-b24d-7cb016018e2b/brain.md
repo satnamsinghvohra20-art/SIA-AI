@@ -1,0 +1,25 @@
+<!-- AUTO-GENERATED SNAPSHOT — DO NOT EDIT BELOW THIS LINE -->
+
+## snapshot: session
+a4d85520-a9ab-468f-b24d-7cb016018e2b
+
+## snapshot: current_task
+- id: —
+- goal: —
+- status: idle
+- started_at: —
+
+## snapshot: plan
+_(no active plan)_
+
+## snapshot: decisions_log (last 15)
+_(none yet)_
+
+## snapshot: chat_summary
+_(nothing summarized yet — still within recent_messages window)_
+
+## snapshot: blockers (last 10)
+_(none)_
+
+## snapshot: last_updated
+2026-09-03T10:56:21.463Z

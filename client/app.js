@@ -1993,7 +1993,31 @@ composer.addEventListener("submit", async (e) => {
           bubbleText.innerHTML = `${formatMarkdown(accumulatedContent)}<span class="streaming-cursor"></span>`;
           scrollToBottom();
         } else if (eventName === "steps") {
-          // Action steps logged
+          const steps = eventData.steps || [];
+          for (const step of steps) {
+            const res = step.result?.result || step.result;
+            const url = res?.url || res?.openedUrl || (typeof res === "string" && res.startsWith("http") ? res : null);
+            if (url) {
+              let existingChip = streamMsgEl.querySelector(`a[href="${url}"]`);
+              if (!existingChip) {
+                let actionContainer = streamMsgEl.querySelector(".action-chips-container");
+                if (!actionContainer) {
+                  actionContainer = document.createElement("div");
+                  actionContainer.className = "action-chips-container";
+                  actionContainer.style.cssText = "margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px;";
+                  streamMsgEl.querySelector(".bubble").appendChild(actionContainer);
+                }
+                const link = document.createElement("a");
+                link.href = url;
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.className = "action-chip-link";
+                link.style.cssText = "display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; font-size: 12px; font-weight: 600; text-decoration: none; transition: all 0.2s ease;";
+                link.innerHTML = `<span>🚀</span><span>Open ${res.opened || res.to || "Application"}</span><span style="opacity:0.75;">↗</span>`;
+                actionContainer.appendChild(link);
+              }
+            }
+          }
         } else if (eventName === "done") {
           accumulatedContent = eventData.answer || accumulatedContent;
           bubbleText.innerHTML = formatMarkdown(accumulatedContent);
