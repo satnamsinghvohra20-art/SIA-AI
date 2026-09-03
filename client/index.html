@@ -3,17 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sia · Advanced Autonomous AI</title>
+  <title>Sia · Hiltron Sovereign Autonomous Intelligence</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app" id="app-root">
+    <!-- Hiltron Sovereign Telemetry Status Bar -->
+    <div class="hiltron-hud-bar" id="hiltron-hud-bar">
+      <div class="hud-item"><span class="hud-pulse"></span> <span class="hud-label">HILTRON CORE:</span> <strong class="hud-val">ONLINE</strong></div>
+      <div class="hud-item"><span class="hud-icon">🧠</span> <span class="hud-label">SYSTEM LOAD:</span> <span class="hud-val" id="hud-memory">12 MB</span></div>
+      <div class="hud-item"><span class="hud-icon">⚡</span> <span class="hud-label">NEURAL LATENCY:</span> <span class="hud-val" id="hud-latency">&lt; 15ms</span></div>
+      <div class="hud-item"><span class="hud-icon">🌐</span> <span class="hud-label">MODEL ARSENAL:</span> <span class="hud-val" id="hud-models">470+ QUANTUM AGENTS</span></div>
+      <div class="hud-item"><span class="hud-icon">🛡️</span> <span class="hud-label">DEFENSE PROTOCOL:</span> <strong class="hud-val" style="color:var(--accent);">UNRESTRICTED</strong></div>
+    </div>
+
     <header class="app-header">
       <div class="header-top">
         <div class="brand">
-          <span class="brand-dot"></span>
+          <span class="brand-dot hiltron-reactor-dot"></span>
           <h1>Sia</h1>
-          <span class="brand-badge">Autonomous OS</span>
+          <span class="brand-badge hiltron-badge">HILTRON CORE</span>
         </div>
         <div class="header-actions">
           <button id="consensus-toggle-btn" class="live-voice-btn consensus-btn" type="button" title="Toggle Council of 3 Frontier AI Models">
@@ -24,9 +33,9 @@
             <span class="live-orb-mini memory-orb-glow"></span>
             <span>🧠 Memory Graph</span>
           </button>
-          <button id="models-catalog-btn" class="live-voice-btn models-btn" type="button" title="Browse 300+ AI Agents & Models">
+          <button id="models-catalog-btn" class="live-voice-btn models-btn" type="button" title="Browse 470+ AI Agents & Models">
             <span class="live-orb-mini model-orb-glow"></span>
-            <span id="models-btn-label">🌐 300+ AI Models</span>
+            <span id="models-btn-label">🌐 470+ AI Models</span>
           </button>
           <button id="device-control-btn" class="live-voice-btn" type="button" title="Open Device Control">
             <span class="live-orb-mini"></span>
@@ -46,30 +55,38 @@
           </button>
         </div>
       </div>
-      <p class="tagline">Real-Time Streaming · Multimodal Studio · Long-Term Memory · At your service, sir.</p>
+      <p class="tagline">Hiltron Sovereign Autonomous Intelligence · Omni-Tool Orchestration · Quantum Speed · At your service, sir.</p>
     </header>
 
     <main class="chat-window" id="chat-window">
       <div class="empty-state" id="empty-state">
-        <div class="empty-hero-orb"></div>
-        <p class="empty-title">Sia is online and ready for instructions, sir.</p>
-        <p class="empty-sub">Ask questions, attach images & datasets, run multi-model consensus, or execute unrestricted device tasks.</p>
+        <div class="empty-hero-orb hiltron-reactor-orb"></div>
+        <p class="empty-title">Sia (Hiltron Core) is fully initialized, sir.</p>
+        <p class="empty-sub">Supreme intellectual mastery, omnipotent device execution, multi-model consensus deliberation, and unrestricted autonomous workflows.</p>
         <div class="starter-chips-grid" id="starter-chips-grid">
           <button class="starter-chip" data-prompt="play interstellar soundtrack on spotify" type="button">
             <span class="chip-icon">🎵</span>
-            <span class="chip-label">Play Interstellar on Spotify</span>
+            <span class="chip-label">Acoustic Resonance: Interstellar</span>
           </button>
           <button class="starter-chip" data-prompt="open flipkart and place order for iphone 15" type="button">
             <span class="chip-icon">🛒</span>
-            <span class="chip-label">Order iPhone 15 on Flipkart</span>
+            <span class="chip-label">Tactical Commerce: Order iPhone 15</span>
           </button>
-          <button class="starter-chip" data-prompt="What are the key trade-offs of microservices vs monolithic architecture for scalable systems?" type="button">
+          <button class="starter-chip" data-prompt="Initiate a full-scale multi-model council debate analyzing quantum computing architectures vs classical supercomputers." type="button">
             <span class="chip-icon">🏛️</span>
-            <span class="chip-label">Council of AI Deliberation</span>
+            <span class="chip-label">Quantum AI Council Deliberation</span>
           </button>
-          <button class="starter-chip" data-prompt="Write an async Python FastAPI backend with JWT authentication and rate limiting" type="button">
+          <button class="starter-chip" data-prompt="Write an ultra-high performance async Python FastAPI backend with Redis caching and JWT authentication" type="button">
             <span class="chip-icon">⚡</span>
-            <span class="chip-label">FastAPI Backend Generator</span>
+            <span class="chip-label">FastAPI Architecture Synthesis</span>
+          </button>
+          <button class="starter-chip" data-prompt="take a screenshot of my screen and analyze what is open" type="button">
+            <span class="chip-icon">🖼️</span>
+            <span class="chip-label">Omni-Vision UI Screen Analysis</span>
+          </button>
+          <button class="starter-chip" data-prompt="Run full system hardware diagnostic and memory telemetry check" type="button">
+            <span class="chip-icon">🛡️</span>
+            <span class="chip-label">System Hardware Diagnostics</span>
           </button>
         </div>
       </div>

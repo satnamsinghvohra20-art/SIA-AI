@@ -61,8 +61,121 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  max-width: 760px;
+  max-width: 860px;
   margin: 0 auto;
+}
+
+/* ============================================================
+   Hiltron Sovereign Telemetry Status Bar
+   ============================================================ */
+.hiltron-hud-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 16px;
+  background: rgba(15, 17, 23, 0.95);
+  border-bottom: 1px solid rgba(94, 224, 200, 0.2);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.hud-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hud-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #5ee0c8;
+  box-shadow: 0 0 10px #5ee0c8, 0 0 20px #5ee0c8;
+  animation: hudBreathe 1.8s infinite ease-in-out;
+}
+
+@keyframes hudBreathe {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.hud-label {
+  color: #64748b;
+  font-size: 10px;
+}
+
+.hud-val {
+  color: #f1f5f9;
+  font-weight: 600;
+}
+
+.hiltron-reactor-dot {
+  background: radial-gradient(circle, #5ee0c8 20%, #00e5ff 60%, #ff5252 100%) !important;
+  box-shadow: 0 0 12px #5ee0c8, 0 0 24px #00e5ff !important;
+  animation: reactorPulse 2s infinite alternate ease-in-out;
+}
+
+@keyframes reactorPulse {
+  0% { transform: scale(1); filter: hue-rotate(0deg); }
+  100% { transform: scale(1.18); filter: hue-rotate(45deg); }
+}
+
+.hiltron-badge {
+  background: linear-gradient(135deg, rgba(94, 224, 200, 0.15), rgba(255, 82, 82, 0.15)) !important;
+  border: 1px solid rgba(94, 224, 200, 0.4) !important;
+  color: #5ee0c8 !important;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+/* Hiltron Reactor Quantum Orb */
+.hiltron-reactor-orb {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #5ee0c8, #007799 45%, #0d1117 80%);
+  box-shadow: 0 0 35px rgba(94, 224, 200, 0.4), 0 0 70px rgba(0, 229, 255, 0.25), inset 0 0 20px rgba(255, 255, 255, 0.4);
+  position: relative;
+  animation: reactorOrbFloat 4s infinite ease-in-out;
+}
+
+.hiltron-reactor-orb::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(94, 224, 200, 0.6);
+  animation: reactorRingRotate 12s infinite linear;
+}
+
+.hiltron-reactor-orb::after {
+  content: "";
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 82, 82, 0.3);
+  animation: reactorRingRotateRev 16s infinite linear;
+}
+
+@keyframes reactorOrbFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes reactorRingRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes reactorRingRotateRev {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
 }
 
 .app-header {

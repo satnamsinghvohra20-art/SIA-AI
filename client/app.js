@@ -2417,7 +2417,7 @@ window.addEventListener("keydown", (e) => {
 document.addEventListener("click", async (e) => {
   const copyBtn = e.target.closest(".copy-code-btn");
   if (!copyBtn) return;
-  const codeWrapper = copyBtn.closest(".code-wrapper");
+  const codeWrapper = copyBtn.closest(".code-block-wrapper");
   const codeEl = codeWrapper ? codeWrapper.querySelector("pre code") : null;
   if (!codeEl) return;
 
@@ -2433,4 +2433,33 @@ document.addEventListener("click", async (e) => {
     console.warn("Clipboard write failed:", err);
   }
 });
+
+// ============================================================
+// Hiltron Real-Time Telemetry Polling
+// ============================================================
+async function updateHiltronTelemetry() {
+  const hudMemory = document.getElementById("hud-memory");
+  const hudLatency = document.getElementById("hud-latency");
+  const hudModels = document.getElementById("hud-models");
+  if (!hudMemory) return;
+
+  const t0 = performance.now();
+  try {
+    const res = await fetch("/api/health");
+    const latency = Math.round(performance.now() - t0);
+    if (res.ok) {
+      const data = await res.json();
+      hudMemory.textContent = `${data.memoryUsageMB || 12} MB`;
+      if (hudLatency) hudLatency.textContent = `${latency}ms`;
+      if (hudModels && data.modelsCatalogTotal) {
+        hudModels.textContent = `${data.modelsCatalogTotal}+ QUANTUM AGENTS`;
+      }
+    }
+  } catch (_) {
+    if (hudLatency) hudLatency.textContent = "Offline";
+  }
+}
+
+setInterval(updateHiltronTelemetry, 12000);
+setTimeout(updateHiltronTelemetry, 1000);
 
