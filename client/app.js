@@ -423,7 +423,9 @@ function scrollToBottom() {
 }
 
 function addUserMessage(text) {
-  emptyState.remove();
+  if (emptyState && emptyState.parentElement) {
+    emptyState.remove();
+  }
   const el = document.createElement("div");
   el.className = "msg user";
   el.innerHTML = `<div class="bubble"></div>`;
@@ -2383,7 +2385,13 @@ document.addEventListener("click", (e) => {
   if (!promptText || !input) return;
   input.value = promptText;
   input.focus();
-  if (form) form.requestSubmit();
+  if (composer) {
+    if (typeof composer.requestSubmit === "function") {
+      composer.requestSubmit();
+    } else {
+      composer.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+    }
+  }
 });
 
 // ============================================================
