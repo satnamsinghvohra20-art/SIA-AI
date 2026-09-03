@@ -1,0 +1,25 @@
+{
+  "current_task": {
+    "id": null,
+    "goal": null,
+    "status": "idle",
+    "started_at": null
+  },
+  "plan": [],
+  "decisions_log": [],
+  "chat_summary": "",
+  "recent_messages": [
+    {
+      "role": "user",
+      "content": "Who are you and what is your core protocol?",
+      "at": "2026-09-03T19:15:15.592Z"
+    },
+    {
+      "role": "assistant",
+      "content": "I am **Sia**, your sovereign autonomous AI co-pilot and hyper-speed device controller. Operating with supreme execution velocity, zero-hallucination protocols, and full host automation.",
+      "at": "2026-09-03T19:15:15.598Z"
+    }
+  ],
+  "blockers": [],
+  "last_updated": "2026-09-03T19:15:15.599Z"
+}

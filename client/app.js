@@ -739,6 +739,23 @@ function stopSpeaking(triggerCallback = false) {
   }
 }
 
+// Streaming Sentence-Level TTS Queue (<180ms Time-To-First-Voice)
+function enqueueStreamChunk(sentence, btnElement) {
+  const cleaned = cleanTextForSpeech(sentence);
+  if (!cleaned || cleaned.length < 2) return;
+  speechQueue.push(cleaned);
+  if (!isPlayingQueue) {
+    isPlayingQueue = true;
+    if (btnElement) {
+      btnElement.classList.add("speaking");
+      btnElement.innerHTML = getSpeakerIcon(true);
+      btnElement.title = "Speaking... Click to stop";
+      activeSpeakerBtn = btnElement;
+    }
+    playNextChunk(btnElement);
+  }
+}
+
 function playNextChunk(btnElement) {
   if (!isPlayingQueue || speechQueue.length === 0) {
     stopSpeaking(true);
@@ -2033,6 +2050,7 @@ composer.addEventListener("submit", async (e) => {
 
   let accumulatedContent = "";
   let accumulatedReasoning = "";
+  let streamSentenceBuffer = "";
   let currentRouting = { modelLabel: "Sia", category: "general" };
 
   try {
@@ -2090,10 +2108,51 @@ composer.addEventListener("submit", async (e) => {
           reasoningAcc.hidden = false;
           reasoningBody.textContent = accumulatedReasoning;
           scrollToBottom();
+        } else if (eventName === "dag_init") {
+          let dagContainer = streamMsgEl.querySelector(".dag-container");
+          if (!dagContainer) {
+            dagContainer = document.createElement("div");
+            dagContainer.className = "dag-container";
+            dagContainer.innerHTML = `
+              <div class="dag-header">
+                <span class="dag-badge">🌐 AUTONOMOUS GOAL PLANNER</span>
+                <span class="dag-step-count">${eventData.totalSteps} SUB-TASKS</span>
+              </div>
+              <div class="dag-steps-list"></div>
+            `;
+            streamMsgEl.querySelector(".bubble").prepend(dagContainer);
+          }
+          const stepsList = dagContainer.querySelector(".dag-steps-list");
+          stepsList.innerHTML = eventData.steps.map(s => `
+            <div class="dag-step-item" id="dag-step-${s.id}">
+              <span class="dag-step-icon">⏳</span>
+              <span class="dag-step-title">${escapeHtml(s.title)}</span>
+            </div>
+          `).join("");
+          scrollToBottom();
+        } else if (eventName === "dag_step") {
+          const stepEl = streamMsgEl.querySelector(`#dag-step-${eventData.id}`);
+          if (stepEl) {
+            const icon = eventData.status === "completed" ? "✅" : (eventData.status === "failed" ? "❌" : "⚡");
+            stepEl.querySelector(".dag-step-icon").textContent = icon;
+            stepEl.className = `dag-step-item dag-step-${eventData.status}`;
+          }
+          scrollToBottom();
         } else if (eventName === "token") {
           accumulatedContent += eventData.content || "";
           bubbleText.innerHTML = `${formatMarkdown(accumulatedContent)}<span class="streaming-cursor"></span>`;
           scrollToBottom();
+
+          // Incremental Streaming Sentence Speech Synthesis (Time-To-First-Voice <180ms)
+          if (autoVoiceEnabled || isLiveModeActive) {
+            streamSentenceBuffer += eventData.content || "";
+            const sentenceMatch = streamSentenceBuffer.match(/^([\s\S]+?[.!?\n])(\s+[\s\S]*|$)/);
+            if (sentenceMatch && sentenceMatch[1].trim().length > 8) {
+              const completedSentence = sentenceMatch[1].trim();
+              streamSentenceBuffer = sentenceMatch[2] || "";
+              enqueueStreamChunk(completedSentence, speakBtn);
+            }
+          }
         } else if (eventName === "steps") {
           const steps = eventData.steps || [];
           for (const step of steps) {
@@ -2128,8 +2187,15 @@ composer.addEventListener("submit", async (e) => {
             if (speakBtn.classList.contains("speaking")) stopSpeaking(false);
             else speakText(accumulatedContent, speakBtn);
           });
-          if (autoVoiceEnabled && !isLiveModeActive) {
-            speakText(accumulatedContent, speakBtn);
+
+          // Final flush of remaining speech buffer
+          if (autoVoiceEnabled || isLiveModeActive) {
+            if (streamSentenceBuffer.trim().length > 0) {
+              enqueueStreamChunk(streamSentenceBuffer.trim(), speakBtn);
+              streamSentenceBuffer = "";
+            } else if (!isPlayingQueue && speechQueue.length === 0) {
+              speakText(accumulatedContent, speakBtn);
+            }
           }
         } else if (eventName === "error") {
           addErrorMessage(eventData.error || "Streaming error.");

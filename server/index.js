@@ -17,8 +17,11 @@ const { streamOpenRouterCompletion } = require("./openrouterClient");
 const { runCouncilConsensus } = require("./consensusEngine");
 const { processUploadedFile, formatMultimodalMessage } = require("./fileHandler");
 const mcpClient = require("./plugins/mcpClient");
-const siaIdentity = require("./siaIdentity");
 const { getModelByIdSync, matchBestModelFrom300, getAllModels } = require("./modelsCatalog");
+const { semanticCache } = require("./semanticCache");
+const { goalPlanner } = require("./goalPlanner");
+const { ambientSentinel } = require("./ambientSentinel");
+const { tryFastDispatch } = require("./fastDispatcher");
 
 const app = express();
 app.use(express.json({ limit: "50mb" }));
@@ -109,8 +112,6 @@ app.get("/api/tts/config", (req, res) => {
   });
 });
 
-const { tryFastDispatch } = require("./fastDispatcher");
-
 // Android app's own TTS) is responsible for the actual audio.
 app.post("/api/voice-command", chatLimiter, async (req, res) => {
   if (!auth.checkPassword(req.headers["x-sia-password"])) {
@@ -193,8 +194,34 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
   };
 
   try {
-    // 1. Fast-Path Direct Dispatch (<50ms execution)
+    // 1. Autonomous Multi-Step Goal Planner (Auto-DAG)
     if (!forceModel && files.length === 0 && (!forceCategory || forceCategory === "auto" || forceCategory === "auto_300")) {
+      if (goalPlanner.isCompoundGoal(userText)) {
+        const dag = goalPlanner.decompose(userText);
+        sendEvent("routing", {
+          category: "autonomous_dag",
+          classifiedBy: "goal_planner",
+          model: "auto-dag-engine",
+          modelLabel: "🌐 Autonomous Goal Planner (Auto-DAG)",
+          why: `Decomposed multi-step goal into ${dag.totalSteps} sequential sub-tasks.`,
+        });
+        sendEvent("dag_init", dag);
+
+        const executionReport = await goalPlanner.executeDAG(dag, {
+          sessionId,
+          onStepUpdate: (step) => sendEvent("dag_step", step),
+        });
+
+        await brain.appendMessage(sessionId, "user", userText);
+        await brain.appendMessage(sessionId, "assistant", executionReport.summary);
+
+        sendEvent("token", { content: executionReport.summary });
+        sendEvent("dag_complete", executionReport);
+        sendEvent("done", { ok: true, answer: executionReport.summary, dag: executionReport });
+        return res.end();
+      }
+
+      // 1B. Fast-Path Direct Dispatch (<10ms execution)
       const fastResult = await tryFastDispatch(userText);
       if (fastResult.matched) {
         await brain.appendMessage(sessionId, "user", userText);
@@ -210,6 +237,25 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
         sendEvent("token", { content: fastResult.answer });
         sendEvent("steps", { steps: fastResult.steps });
         sendEvent("done", { ok: true, answer: fastResult.answer });
+        return res.end();
+      }
+
+      // 1C. Sub-Millisecond Semantic LRU Cache (<1ms execution)
+      const cached = semanticCache.get(userText);
+      if (cached) {
+        await brain.appendMessage(sessionId, "user", userText);
+        await brain.appendMessage(sessionId, "assistant", cached.answer);
+
+        sendEvent("routing", cached.routing || {
+          category: "cached",
+          classifiedBy: "semantic_lru_cache",
+          model: "in-memory-lru",
+          modelLabel: "⚡ In-Memory Semantic Cache (<1ms)",
+          why: `Instant cache hit (${cached.matchType} match, $0 API credit cost).`,
+        });
+        sendEvent("token", { content: cached.answer });
+        sendEvent("steps", { steps: cached.steps || [] });
+        sendEvent("done", { ok: true, answer: cached.answer, fromCache: true });
         return res.end();
       }
     }
@@ -433,8 +479,35 @@ app.post("/api/chat", chatLimiter, async (req, res) => {
   const sessionId = req.sessionId;
 
   try {
-    // 1. Fast-Path Direct Dispatch (<50ms execution)
+// ... [rest of the document unchanged until the legacy REST fallback]
+
+    // 1. Fast-Path Direct Dispatch & Goal Planner (<50ms execution)
     if (!forceModel && (!forceCategory || forceCategory === "auto" || forceCategory === "auto_300")) {
+      if (goalPlanner.isCompoundGoal(message)) {
+        const dag = goalPlanner.decompose(message);
+        const executionReport = await goalPlanner.executeDAG(dag, { sessionId });
+        await brain.appendMessage(sessionId, "user", message);
+        await brain.appendMessage(sessionId, "assistant", executionReport.summary);
+        return res.json({
+          answer: executionReport.summary,
+          routing: {
+            category: "autonomous_dag",
+            classifiedBy: "goal_planner",
+            model: "auto-dag-engine",
+            modelLabel: "🌐 Autonomous Goal Planner (Auto-DAG)",
+            why: `Decomposed multi-step goal into ${dag.totalSteps} sequential sub-tasks.`,
+          },
+          dag: executionReport,
+        });
+      }
+
+      const cached = semanticCache.get(message);
+      if (cached) {
+         await brain.appendMessage(sessionId, "user", message);
+         await brain.appendMessage(sessionId, "assistant", cached.answer);
+         return res.json({ ...cached, cached: true });
+      }
+
       const fastResult = await tryFastDispatch(message);
       if (fastResult.matched) {
         await brain.appendMessage(sessionId, "user", message);
@@ -487,6 +560,9 @@ app.post("/api/chat", chatLimiter, async (req, res) => {
 
     await brain.appendMessage(sessionId, "user", message);
     await brain.appendMessage(sessionId, "assistant", result.answer);
+
+    // Save to Semantic LRU Cache for sub-millisecond future recall
+    semanticCache.set(message, result);
 
     res.json(result);
   } catch (err) {
@@ -632,9 +708,24 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// Ambient Sentinel & Semantic Cache Telemetry Endpoints
+app.get("/api/sentinel/status", (req, res) => {
+  res.json({ ok: true, report: ambientSentinel.getHealthReport() });
+});
+
+app.get("/api/sentinel/briefing", (req, res) => {
+  res.json({ ok: true, briefing: ambientSentinel.getBriefing() });
+});
+
+app.get("/api/cache/stats", (req, res) => {
+  res.json({ ok: true, stats: semanticCache.getStats() });
+});
+
 const PORT = process.env.PORT || 3000;
 const httpServer = app.listen(PORT, () => {
   console.log(`Sia orchestrator running at http://localhost:${PORT}`);
+  ambientSentinel.start();
+
   if (!process.env.OPENROUTER_API_KEY) {
     console.warn(
       "\n⚠️  No OPENROUTER_API_KEY found. Copy .env.example to .env and add your key.\n"

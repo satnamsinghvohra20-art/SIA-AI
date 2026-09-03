@@ -18,14 +18,16 @@ _(none yet)_
 ## snapshot: chat_summary
 **Context:** Sia is on WhatsApp Web via Edge; Hebrew typing issue persists (garbles English, e.g., "a" instead of "Anuj"). Other browser also open. Earlier: Flipkart iPhone 15 order placed by Anuj (green screen, unconfirmed); Python 1-10 loop file open in VS Code.
 
+**Latest request:** Send WhatsApp message to Anuj with text "Hey bro."
+
 **WhatsApp messages to Anuj:**
-- User requested sending WhatsApp message to Anuj.
-- Contact list shows multiple Anuj entries (need correct one, likely "Anuj College").
-- Previous send attempt resulted in solid green screen (rendering issue, send unverified).
-- Latest assistant response claims: "Dispatched message to message, sir." — unclear what content was sent or to which Anuj; message details (recipient, text) not confirmed.
+- Multiple Anuj contacts in list (need correct one, likely "Anuj College").
+- Previous send attempts caused solid green screen (rendering issue, send unverified).
+- Earlier assistant response claimed dispatch of unclear message content to ambiguous recipient.
+- No confirmation yet that "Hey bro." was successfully sent to correct Anuj.
 
 **Open threads:**
-- Verify whether the latest message was actually delivered to the correct Anuj contact; resend if needed.
+- Verify whether "Hey bro." was actually delivered to correct Anuj contact; resend if needed.
 - Reload WhatsApp Web to fix green screen.
 - Distinguish correct Anuj contact from others (typing errors cause wrong selections).
 - Resolve Hebrew typing/IME issue on Edge.
@@ -33,7 +35,9 @@ _(none yet)_
 - Clarify "Text to Anuj Hebrew" — Hebrew message content or fix Hebrew typing first?
 - Pending: "Open camera and take my photo" (unaddressed).
 - Python loop file still open in VS Code.
-- Confirm exact message content and recipient of the recent dispatch.
+- Confirm exact recipient and delivery of "Hey bro." message.
+[unsummarized]
+user: MMM.
 
 ## snapshot: blockers (last 10)
 - 2026-08-24T14:48:25.925Z — /api/chat failed: All candidate AI models failed. Last error: Model deepseek/deepseek-chat returned 402: {"error":{"message":"Insufficient credits. This account never purchased credits. Make sure your key is on the correct account or org, and if so, purchase more at https://openrouter.ai/settings/credits
@@ -48,4 +52,4 @@ _(none yet)_
 - 2026-09-03T12:19:57.074Z — /api/chat failed: All candidate AI models failed. Last error: Model nvidia/nemotron-3-super-120b-a12b:free returned 429: {"error":{"message":"Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day","code":429,"metadata":{"headers":{"X-RateLimit-Limit":"50","X-RateLimit-Remain
 
 ## snapshot: last_updated
-2026-09-03T12:21:36.735Z
+2026-09-03T12:55:25.280Z

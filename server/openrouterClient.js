@@ -199,7 +199,28 @@ async function streamOpenRouterCompletion({
     }
   }
 
-  throw new Error(`All candidate AI models failed to stream. Last error: ${lastError?.message || "unknown"}`);
+  // 100% Offline / Zero-Cost Sovereign Fallback
+  console.log("[OpenRouter Stream] Cloud models exhausted. Falling back to Sovereign Local Cognitive Engine...");
+  const { generateLocalFallback } = require("./localBrain");
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === "user")?.content || "";
+  const localResult = await generateLocalFallback({ message: typeof lastUserMsg === "string" ? lastUserMsg : "Hello" });
+
+  if (onChunk) {
+    onChunk({ type: "token", text: localResult.answer, model: localResult.routing.modelLabel });
+    onChunk({
+      type: "done",
+      content: localResult.answer,
+      reasoning: "",
+      model: localResult.routing.modelLabel,
+      done: true,
+    });
+  }
+
+  return {
+    answer: localResult.answer,
+    reasoning: "",
+    model: localResult.routing.modelLabel,
+  };
 }
 
 /**
@@ -292,7 +313,12 @@ async function callOpenRouter({
     }
   }
 
-  throw new Error(`All candidate AI models failed. Last error: ${lastError?.message || "unknown"}`);
+  // 100% Offline / Zero-Cost Sovereign Fallback
+  console.log("[OpenRouter Non-Stream] Cloud models exhausted. Falling back to Sovereign Local Cognitive Engine...");
+  const { generateLocalFallback } = require("./localBrain");
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === "user")?.content || "";
+  const localResult = await generateLocalFallback({ message: typeof lastUserMsg === "string" ? lastUserMsg : "Hello" });
+  return localResult.answer;
 }
 
 /**
