@@ -56,7 +56,19 @@
       "category": "extracted",
       "text": "User prefers to communicate with Anuj in Hebrew.",
       "created_at": "2026-09-03T10:04:53.994Z"
+    },
+    {
+      "id": "fact_1788438061239_fnka",
+      "category": "extracted",
+      "text": "User wants to install Safarmax on their PC.",
+      "created_at": "2026-09-03T12:21:01.240Z"
+    },
+    {
+      "id": "fact_1788438089787_i7nr",
+      "category": "extracted",
+      "text": "User wants to install Free Fire Max on their PC.",
+      "created_at": "2026-09-03T12:21:29.787Z"
     }
   ],
-  "last_updated": "2026-09-03T10:04:53.995Z"
+  "last_updated": "2026-09-03T12:21:29.788Z"
 }

@@ -16,27 +16,36 @@ _(no active plan)_
 _(none yet)_
 
 ## snapshot: chat_summary
-Sia is using WhatsApp Web on Edge. Prior context: Hebrew typing issue, accidental messages, attempted Flipkart iPhone 15 order (Anuj placed it, green screen appeared), Anuj checked Amazon with no order details, Python file in VS Code (loop printing 1-10), Anuj opened file explorer, Sia asked if the order was placed, then requested Anuj send a WhatsApp message to Anuj saying "Hey bro." The assistant sent the message to "a."
+**Context:** Sia is on WhatsApp Web via Edge; Hebrew typing issue persists (garbles English, e.g., "a" instead of "Anuj"). Other browser also open. Earlier: Flipkart iPhone 15 order placed by Anuj (green screen, unconfirmed); Python 1-10 loop file open in VS Code.
 
-Latest: Sia asked "Where you have sent the message," seeking clarification on the recipient of the WhatsApp message.
+**WhatsApp messages to Anuj:**
+- User requested sending WhatsApp message to Anuj.
+- Contact list shows multiple Anuj entries (need correct one, likely "Anuj College").
+- Previous send attempt resulted in solid green screen (rendering issue, send unverified).
+- Latest assistant response claims: "Dispatched message to message, sir." — unclear what content was sent or to which Anuj; message details (recipient, text) not confirmed.
 
-Open threads:
-- Resolve Hebrew typing issue
-- Clarify which "Anuj College" is referenced
-- Confirm Flipkart iPhone 15 order status
-- Clarify the recipient of the sent WhatsApp message (sent to "a" — likely incorrect/incomplete contact) and possibly resend to the correct Anuj contact
+**Open threads:**
+- Verify whether the latest message was actually delivered to the correct Anuj contact; resend if needed.
+- Reload WhatsApp Web to fix green screen.
+- Distinguish correct Anuj contact from others (typing errors cause wrong selections).
+- Resolve Hebrew typing/IME issue on Edge.
+- Confirm Flipkart iPhone 15 order status with Anuj.
+- Clarify "Text to Anuj Hebrew" — Hebrew message content or fix Hebrew typing first?
+- Pending: "Open camera and take my photo" (unaddressed).
+- Python loop file still open in VS Code.
+- Confirm exact message content and recipient of the recent dispatch.
 
 ## snapshot: blockers (last 10)
-- 2026-08-24T14:19:11.385Z — /api/chat failed: persistedHistory is not defined
-- 2026-08-24T14:48:13.046Z — /api/chat failed: All candidate AI models failed. Last error: Model deepseek/deepseek-chat returned 402: {"error":{"message":"Insufficient credits. This account never purchased credits. Make sure your key is on the correct account or org, and if so, purchase more at https://openrouter.ai/settings/credits
-- 2026-08-24T14:48:13.417Z — /api/chat failed: All candidate AI models failed. Last error: Model deepseek/deepseek-chat returned 402: {"error":{"message":"Insufficient credits. This account never purchased credits. Make sure your key is on the correct account or org, and if so, purchase more at https://openrouter.ai/settings/credits
-- 2026-08-24T14:48:21.659Z — /api/chat failed: All candidate AI models failed. Last error: Model deepseek/deepseek-chat returned 402: {"error":{"message":"Insufficient credits. This account never purchased credits. Make sure your key is on the correct account or org, and if so, purchase more at https://openrouter.ai/settings/credits
 - 2026-08-24T14:48:25.925Z — /api/chat failed: All candidate AI models failed. Last error: Model deepseek/deepseek-chat returned 402: {"error":{"message":"Insufficient credits. This account never purchased credits. Make sure your key is on the correct account or org, and if so, purchase more at https://openrouter.ai/settings/credits
 - 2026-08-24T14:48:28.257Z — /api/chat failed: All candidate AI models failed. Last error: Model deepseek/deepseek-chat returned 402: {"error":{"message":"Insufficient credits. This account never purchased credits. Make sure your key is on the correct account or org, and if so, purchase more at https://openrouter.ai/settings/credits
 - 2026-08-24T14:48:28.891Z — /api/chat failed: All candidate AI models failed. Last error: Model deepseek/deepseek-chat returned 402: {"error":{"message":"This request requires more credits, or fewer max_tokens. You requested up to 700 tokens, but can only afford 603. To increase, visit https://openrouter.ai/settings/credits and upg
 - 2026-08-24T14:48:29.098Z — /api/chat failed: All candidate AI models failed. Last error: Model deepseek/deepseek-chat returned 402: {"error":{"message":"Insufficient credits. This account never purchased credits. Make sure your key is on the correct account or org, and if so, purchase more at https://openrouter.ai/settings/credits
 - 2026-08-24T15:11:48.155Z — /api/chat failed: All candidate AI models failed. Last error: Model deepseek/deepseek-chat returned 402: {"error":{"message":"Insufficient credits. This account never purchased credits. Make sure your key is on the correct account or org, and if so, purchase more at https://openrouter.ai/settings/credits
 - 2026-08-25T14:09:24.516Z — /api/chat failed: All candidate AI models failed. Last error: Model deepseek/deepseek-chat returned 402: {"error":{"message":"Insufficient credits. This account never purchased credits. Make sure your key is on the correct account or org, and if so, purchase more at https://openrouter.ai/settings/credits
+- 2026-09-03T12:17:19.308Z — /api/chat failed: All candidate AI models failed. Last error: Model nvidia/nemotron-3-super-120b-a12b:free returned 429: {"error":{"message":"Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day","code":429,"metadata":{"headers":{"X-RateLimit-Limit":"50","X-RateLimit-Remain
+- 2026-09-03T12:18:45.688Z — /api/chat failed: All candidate AI models failed. Last error: Model nvidia/nemotron-3-super-120b-a12b:free returned 429: {"error":{"message":"Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day","code":429,"metadata":{"headers":{"X-RateLimit-Limit":"50","X-RateLimit-Remain
+- 2026-09-03T12:19:06.702Z — /api/chat failed: All candidate AI models failed. Last error: Model nvidia/nemotron-3-super-120b-a12b:free returned 429: {"error":{"message":"Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day","code":429,"metadata":{"headers":{"X-RateLimit-Limit":"50","X-RateLimit-Remain
+- 2026-09-03T12:19:57.074Z — /api/chat failed: All candidate AI models failed. Last error: Model nvidia/nemotron-3-super-120b-a12b:free returned 429: {"error":{"message":"Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day","code":429,"metadata":{"headers":{"X-RateLimit-Limit":"50","X-RateLimit-Remain
 
 ## snapshot: last_updated
-2026-09-03T10:59:38.732Z
+2026-09-03T12:21:36.735Z

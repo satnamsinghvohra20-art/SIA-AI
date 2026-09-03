@@ -1196,8 +1196,84 @@ function handleLiveSpeechResult(text, isFinal = false) {
     silenceTimer = null;
   }
 
-  // Snappy pause detection: 420ms after final sentence or 750ms after interim speech
-  const pauseDuration = isFinal ? 420 : 750;
+// ============================================================
+// Zero-Latency Client-Side Instant Intent Launcher (0ms Delay)
+// ============================================================
+function detectAndLaunchImmediate(text) {
+  if (!text) return null;
+  const t = text.toLowerCase().trim().replace(/^(sia|hey sia|ok sia|jarvis)[,\s:]*/i, "");
+
+  // 1. YouTube & Spotify Playback
+  const ytMatch = t.match(/^(?:play|listen to)\s+(.+?)(?:\s+on\s+(youtube|spotify))?$/i);
+  if (ytMatch) {
+    const q = encodeURIComponent(ytMatch[1].trim());
+    const isSpot = (ytMatch[2] === "spotify") || ytMatch[1].toLowerCase().includes("song");
+    const url = isSpot ? `https://open.spotify.com/search/${q}` : `https://www.youtube.com/results?search_query=${q}`;
+    try { window.open(url, "_blank"); } catch (_) {}
+    return { url, app: isSpot ? "Spotify" : "YouTube" };
+  }
+
+  // 2. E-Commerce & Shopping
+  const shopMatch = t.match(/^(?:open\s+(?:flipkart|amazon)\s+and\s+)?(?:order|buy|place\s+order\s+for|shop\s+for)\s+(.+?)(?:\s+(?:on|from)\s+(flipkart|amazon))?$/i);
+  if (shopMatch) {
+    const q = encodeURIComponent(shopMatch[1].trim());
+    const isAmz = (shopMatch[2] === "amazon");
+    const url = isAmz ? `https://www.amazon.com/s?k=${q}` : `https://www.flipkart.com/search?q=${q}`;
+    try { window.open(url, "_blank"); } catch (_) {}
+    return { url, app: isAmz ? "Amazon" : "Flipkart" };
+  }
+
+  // 3. Direct App / Web Portals
+  const openMatch = t.match(/^(?:open|launch|go to|start|bring up)\s+([a-zA-Z0-9.\s_-]+)$/i);
+  if (openMatch) {
+    const app = openMatch[1].trim().toLowerCase();
+    const WEB_MAP = {
+      youtube: "https://www.youtube.com",
+      spotify: "https://open.spotify.com",
+      flipkart: "https://www.flipkart.com",
+      amazon: "https://www.amazon.com",
+      instagram: "https://www.instagram.com",
+      reddit: "https://www.reddit.com",
+      twitter: "https://x.com",
+      x: "https://x.com",
+      github: "https://github.com",
+      netflix: "https://www.netflix.com",
+      gmail: "https://mail.google.com",
+      cricbuzz: "https://www.cricbuzz.com",
+      weather: "https://www.google.com/search?q=weather+today",
+      wikipedia: "https://www.wikipedia.org",
+      claude: "https://claude.ai",
+      chatgpt: "https://chatgpt.com",
+      canva: "https://www.canva.com",
+      figma: "https://www.figma.com",
+      linkedin: "https://www.linkedin.com",
+      maps: "https://maps.google.com",
+      whatsapp: "https://web.whatsapp.com"
+    };
+    if (WEB_MAP[app]) {
+      try { window.open(WEB_MAP[app], "_blank"); } catch (_) {}
+      return { url: WEB_MAP[app], app };
+    } else if (app.includes(".com") || app.includes(".org") || app.includes(".in")) {
+      const u = app.startsWith("http") ? app : `https://${app}`;
+      try { window.open(u, "_blank"); } catch (_) {}
+      return { url: u, app };
+    }
+  }
+
+  // 4. Web Search
+  const searchMatch = t.match(/^(?:search(?:\s+for)?|google|look up)\s+(.+)$/i);
+  if (searchMatch) {
+    const q = encodeURIComponent(searchMatch[1].trim());
+    const url = `https://www.google.com/search?q=${q}`;
+    try { window.open(url, "_blank"); } catch (_) {}
+    return { url, app: "Google" };
+  }
+
+  return null;
+}
+
+// Snappy pause detection: 260ms after final sentence or 500ms after interim speech
+  const pauseDuration = isFinal ? 260 : 500;
   silenceTimer = setTimeout(() => {
     if (isLiveModeActive && !isLiveMuted && text.trim().length > 0 && liveState === "LISTENING") {
       dispatchLiveConversation(text.trim());
@@ -1221,6 +1297,9 @@ async function dispatchLiveConversation(spokenText) {
   }
 
   playChime("send");
+
+  // Immediate 0ms local launch for instant perceived speed
+  detectAndLaunchImmediate(spokenText);
 
   // Pause speech recognition while Sia thinks and talks back
   shouldBeListening = false;
@@ -1851,6 +1930,7 @@ composer.addEventListener("submit", async (e) => {
 
   // Clear input and files
   addUserMessage(message || `[Attached ${attachedFiles.length} file(s)]`);
+  detectAndLaunchImmediate(message);
   input.value = "";
   pendingAttachedFiles = [];
   renderFileChips();
