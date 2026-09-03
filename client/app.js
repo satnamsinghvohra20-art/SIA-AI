@@ -900,7 +900,7 @@ if (SpeechRecognition) {
   recognition = new SpeechRecognition();
   recognition.continuous = true;
   recognition.interimResults = true;
-  recognition.lang = "en-US";
+  recognition.lang = navigator.language || "en-US";
 
   recognition.onstart = () => {
     isListening = true;
@@ -935,12 +935,19 @@ if (SpeechRecognition) {
       input.value = currentText;
       if (silenceTimer) clearTimeout(silenceTimer);
       if (final && currentText.trim().length > 0) {
+        // Fast 450ms silence detection for snappy response
         silenceTimer = setTimeout(() => {
           if (!isLiveModeActive && shouldBeListening && input.value.trim().length > 0) {
             stopListening();
-            composer.dispatchEvent(new Event("submit", { cancelable: true }));
+            if (composer) {
+              if (typeof composer.requestSubmit === "function") {
+                composer.requestSubmit();
+              } else {
+                composer.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+              }
+            }
           }
-        }, 800);
+        }, 450);
       }
     }
   };
@@ -955,7 +962,7 @@ if (SpeechRecognition) {
       isListening = false;
       if (isLiveModeActive) {
         setLiveState("ERROR", "Microphone / Browser Notice");
-        liveAssistantCaption.textContent = "Voice recognition is blocked in the VS Code embedded browser. Please open http://localhost:3000 in Google Chrome or Microsoft Edge to talk live.";
+        liveAssistantCaption.textContent = "Please grant microphone permissions in your browser to talk with Sia.";
       }
     }
   };
@@ -1021,7 +1028,13 @@ if (micBtn) {
     if (shouldBeListening) {
       stopListening();
       if (input.value.trim().length > 0) {
-        composer.dispatchEvent(new Event("submit", { cancelable: true }));
+        if (composer) {
+          if (typeof composer.requestSubmit === "function") {
+            composer.requestSubmit();
+          } else {
+            composer.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+          }
+        }
       }
     } else {
       stopSpeaking(false);
@@ -1183,8 +1196,8 @@ function handleLiveSpeechResult(text, isFinal = false) {
     silenceTimer = null;
   }
 
-  // Snappy pause detection: 700ms after final sentence or 1000ms after interim speech
-  const pauseDuration = isFinal ? 700 : 1000;
+  // Snappy pause detection: 420ms after final sentence or 750ms after interim speech
+  const pauseDuration = isFinal ? 420 : 750;
   silenceTimer = setTimeout(() => {
     if (isLiveModeActive && !isLiveMuted && text.trim().length > 0 && liveState === "LISTENING") {
       dispatchLiveConversation(text.trim());
@@ -1256,7 +1269,16 @@ async function dispatchLiveConversation(spokenText) {
       return;
     }
 
-    // Action steps handled directly on host system by Sia orchestrator
+    // Auto-open application/web URLs directly in browser
+    if (Array.isArray(data.steps)) {
+      for (const step of data.steps) {
+        const resObj = step.result?.result || step.result;
+        const targetUrl = resObj?.url || resObj?.openedUrl;
+        if (targetUrl && typeof targetUrl === "string") {
+          try { window.open(targetUrl, "_blank"); } catch (_) {}
+        }
+      }
+    }
 
     // Update model badge with routed agent info
     if (data.routing) {
