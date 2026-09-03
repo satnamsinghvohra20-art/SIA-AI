@@ -1179,23 +1179,6 @@ function setLiveState(state, message = "") {
   }
 }
 
-function handleLiveSpeechResult(text, isFinal = false) {
-  if (!text || text.trim().length === 0) return;
-  liveUserCaption.textContent = `"${text}"`;
-
-  // Natural voice interruption: if assistant is currently speaking when user starts talking, stop audio immediately
-  if (liveState === "SPEAKING") {
-    playChime("interrupt");
-    stopSpeaking(false);
-    setLiveState("LISTENING");
-  }
-
-  // Clear previous timer
-  if (silenceTimer) {
-    clearTimeout(silenceTimer);
-    silenceTimer = null;
-  }
-
 // ============================================================
 // Zero-Latency Client-Side Instant Intent Launcher (0ms Delay)
 // ============================================================
@@ -1272,7 +1255,24 @@ function detectAndLaunchImmediate(text) {
   return null;
 }
 
-// Snappy pause detection: 260ms after final sentence or 500ms after interim speech
+function handleLiveSpeechResult(text, isFinal = false) {
+  if (!text || text.trim().length === 0) return;
+  liveUserCaption.textContent = `"${text}"`;
+
+  // Natural voice interruption: if assistant is currently speaking when user starts talking, stop audio immediately
+  if (liveState === "SPEAKING") {
+    playChime("interrupt");
+    stopSpeaking(false);
+    setLiveState("LISTENING");
+  }
+
+  // Clear previous timer
+  if (silenceTimer) {
+    clearTimeout(silenceTimer);
+    silenceTimer = null;
+  }
+
+  // Snappy pause detection: 260ms after final sentence or 500ms after interim speech
   const pauseDuration = isFinal ? 260 : 500;
   silenceTimer = setTimeout(() => {
     if (isLiveModeActive && !isLiveMuted && text.trim().length > 0 && liveState === "LISTENING") {
