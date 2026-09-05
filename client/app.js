@@ -2372,50 +2372,67 @@ if (deviceCloseBtn) {
   deviceCloseBtn.addEventListener("click", closeDevicePanel);
 }
 
-if (deviceForm) {
-  deviceForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const instruction = deviceInstruction.value.trim();
-    if (!instruction) return;
+async function executeDeviceInstruction(instruction) {
+  if (!instruction) return;
 
-    deviceLog.innerHTML = "";
-    deviceLog.dataset.shown = "0";
-    hideConfirmCard();
-    deviceLogLine(`> ${instruction}`, "user");
-    deviceRunBtn.disabled = true;
-    deviceInstruction.disabled = true;
+  deviceLog.innerHTML = "";
+  deviceLog.dataset.shown = "0";
+  hideConfirmCard();
+  deviceLogLine(`> ${instruction}`, "user");
+  deviceRunBtn.disabled = true;
+  deviceInstruction.disabled = true;
 
-    try {
-      const res = await fetch("/api/device/command", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instruction }),
-      });
-      const data = await res.json();
+  try {
+    const res = await fetch("/api/device/command", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ instruction }),
+    });
+    const data = await res.json();
 
-      if (res.status === 401) {
-        showLogin();
-        return;
-      }
-      if (!res.ok) {
-        deviceLogLine(data.error || "Something went wrong.", "error");
-        deviceRunBtn.disabled = false;
-        deviceInstruction.disabled = false;
-        return;
-      }
-
-      applyTaskSnapshot(data);
-      if (data.status !== "awaiting_confirmation") {
-        deviceInstruction.value = "";
-      }
-    } catch (err) {
-      deviceLogLine("Network error: " + err.message, "error");
+    if (res.status === 401) {
+      showLogin();
+      return;
+    }
+    if (!res.ok) {
+      deviceLogLine(data.error || "Something went wrong.", "error");
       deviceRunBtn.disabled = false;
       deviceInstruction.disabled = false;
+      return;
+    }
+
+    applyTaskSnapshot(data);
+    if (data.status !== "awaiting_confirmation") {
+      deviceInstruction.value = "";
+    }
+  } catch (err) {
+    deviceLogLine("Network error: " + err.message, "error");
+    deviceRunBtn.disabled = false;
+    deviceInstruction.disabled = false;
+  }
+}
+
+if (deviceForm) {
+  deviceForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const instruction = deviceInstruction.value.trim();
+    if (instruction) {
+      executeDeviceInstruction(instruction);
     }
   });
 }
+
+// Tactical Quick-Action Grid Listeners
+document.querySelectorAll(".tactical-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const action = btn.dataset.action;
+    if (action) {
+      deviceInstruction.value = action;
+      executeDeviceInstruction(action);
+    }
+  });
+});
 
 async function respondToConfirmation(approved) {
   if (!deviceCurrentTask || !deviceCurrentTask.pendingConfirmation) return;

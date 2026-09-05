@@ -674,6 +674,188 @@ async function getSystemInfo() {
   };
 }
 
+/**
+ * Advanced Device Capabilities
+ */
+
+async function mediaControl({ action = "play_pause" } = {}) {
+  const act = String(action || "play_pause").toLowerCase().trim();
+  if (PLATFORM === "win32") {
+    let vkCode = "0xB3"; // VK_MEDIA_PLAY_PAUSE
+    if (act === "next" || act.includes("skip")) vkCode = "0xB0";
+    else if (act === "previous" || act === "prev") vkCode = "0xB1";
+    else if (act === "stop") vkCode = "0xB2";
+
+    const script = `
+Add-Type -TypeDefinition '
+using System.Runtime.InteropServices;
+public class MediaKey {
+  [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);
+}';
+[MediaKey]::keybd_event(${vkCode}, 0, 0, 0);
+[MediaKey]::keybd_event(${vkCode}, 0, 2, 0);
+`;
+    await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script.replace(/\r?\n/g, " ")]).catch(() => {});
+    return { success: true, action: act, key: vkCode };
+  } else if (PLATFORM === "darwin") {
+    const cmd = act === "next" ? "next track" : (act === "previous" || act === "prev" ? "previous track" : "playpause");
+    await run("osascript", ["-e", `tell application "Spotify" to ${cmd}`]).catch(() => {});
+    return { success: true, action: act };
+  } else {
+    const cmd = act === "next" ? "next" : (act === "previous" || act === "prev" ? "previous" : "play-pause");
+    await run("playerctl", [cmd]).catch(() => {});
+    return { success: true, action: act };
+  }
+}
+
+async function windowControl({ action = "minimize", title = null } = {}) {
+  const act = String(action || "minimize").toLowerCase().trim();
+  if (PLATFORM === "win32") {
+    if (act === "show_desktop" || act === "minimize_all") {
+      const script = `(New-Object -ComObject Shell.Application).MinimizeAll()`;
+      await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]).catch(() => {});
+      return { success: true, action: "show_desktop" };
+    }
+
+    const t = title ? String(title).trim() : "";
+    let cmdShow = 6; // SW_MINIMIZE
+    if (act === "maximize") cmdShow = 3;
+    else if (act === "restore") cmdShow = 9;
+
+    const script = `
+Add-Type -TypeDefinition '
+using System;
+using System.Runtime.InteropServices;
+public class WinUtil {
+  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+}';
+${t ? `
+$p = Get-Process | Where-Object { ($_.MainWindowTitle -match '${t.replace(/'/g, "''")}' -or $_.ProcessName -match '${t.replace(/'/g, "''")}') -and $_.MainWindowHandle -ne [IntPtr]::Zero } | Select-Object -First 1
+if ($p) {
+  ${act === "close" ? "$p.CloseMainWindow() | Out-Null" : `[WinUtil]::ShowWindowAsync($p.MainWindowHandle, ${cmdShow}); [WinUtil]::SetForegroundWindow($p.MainWindowHandle);`}
+}
+` : `
+$hwnd = [WinUtil]::GetForegroundWindow();
+if ($hwnd -ne [IntPtr]::Zero) {
+  [WinUtil]::ShowWindowAsync($hwnd, ${cmdShow});
+}
+`}
+`;
+    await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script.replace(/\r?\n/g, " ")]).catch(() => {});
+    return { success: true, action: act, target: title || "active_window" };
+  } else if (PLATFORM === "darwin") {
+    if (act === "minimize" || act === "show_desktop") {
+      await run("osascript", ["-e", `tell application "System Events" to set visible of every process whose visible is true to false`]).catch(() => {});
+    }
+    return { success: true, action: act };
+  }
+  return { success: false, error: "Unsupported platform" };
+}
+
+async function clipboardControl({ action = "get", text = "" } = {}) {
+  const act = String(action || "get").toLowerCase().trim();
+  if (PLATFORM === "win32") {
+    if (act === "get" || act === "read") {
+      const script = `powershell.exe -NoProfile -NonInteractive -Command "Get-Clipboard"`;
+      const out = await new Promise((resolve) => {
+        execFile("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "Get-Clipboard"], { timeout: 6000, windowsHide: true }, (err, stdout) => {
+          resolve(stdout ? stdout.trim() : "");
+        });
+      });
+      return { success: true, action: "get", text: out };
+    } else if (act === "set" || act === "copy") {
+      const success = await new Promise((resolve) => {
+        try {
+          const child = spawn("clip.exe", [], { windowsHide: true });
+          child.stdin.end(Buffer.from(String(text || ""), "utf8"));
+          child.on("close", (code) => resolve(code === 0));
+          child.on("error", () => resolve(false));
+        } catch (_) {
+          resolve(false);
+        }
+      });
+      return { success, action: "set", text };
+    } else if (act === "clear") {
+      await new Promise((resolve) => {
+        try {
+          const child = spawn("clip.exe", [], { windowsHide: true });
+          child.stdin.end("");
+          child.on("close", () => resolve());
+          child.on("error", () => resolve());
+        } catch (_) {
+          resolve();
+        }
+      });
+      return { success: true, action: "clear" };
+    }
+  } else if (PLATFORM === "darwin") {
+    if (act === "get" || act === "read") {
+      const out = await run("pbpaste").catch(() => "");
+      return { success: true, action: "get", text: out.trim() };
+    } else {
+      await run("pbcopy", [], { input: text }).catch(() => {});
+      return { success: true, action: "set", text };
+    }
+  }
+  return { success: false, error: "Unsupported platform" };
+}
+
+async function setBrightness({ percent = 50 } = {}) {
+  const pct = Math.max(0, Math.min(100, Math.round(Number(percent) || 50)));
+  if (PLATFORM === "win32") {
+    const script = `
+try {
+  Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods | Invoke-CimMethod -MethodName WmiSetBrightness -Arguments @{Timeout = 1; Brightness = ${pct}} | Out-Null
+  Write-Output "OK"
+} catch {
+  Write-Output "FAILED"
+}
+`;
+    const res = await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script.replace(/\r?\n/g, " ")]).catch(() => "");
+    return { success: res.includes("OK"), brightness: pct };
+  }
+  return { success: false, error: "Brightness control requires Windows WMI supported monitor" };
+}
+
+async function lockWorkstation() {
+  if (PLATFORM === "win32") {
+    const script = `Add-Type -TypeDefinition 'using System.Runtime.InteropServices; public class Lock { [DllImport("user32.dll")] public static extern bool LockWorkStation(); }'; [Lock]::LockWorkStation();`;
+    await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script.replace(/\r?\n/g, " ")]).catch(() => {});
+    return { success: true, locked: true };
+  } else if (PLATFORM === "darwin") {
+    await run("pmset", ["displaysleepnow"]).catch(() => {});
+    return { success: true, locked: true };
+  } else {
+    await run("loginctl", ["lock-session"]).catch(() => {});
+    return { success: true, locked: true };
+  }
+}
+
+async function listRunningApps() {
+  if (PLATFORM === "win32") {
+    const script = `
+$procs = Get-Process | Where-Object { $_.MainWindowTitle -ne '' -and $_.MainWindowHandle -ne [IntPtr]::Zero } | Select-Object -Property Id, ProcessName, MainWindowTitle | Select-Object -First 30;
+$procs | ConvertTo-Json -Compress;
+`;
+    const out = await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script.replace(/\r?\n/g, " ")]).catch(() => "[]");
+    let apps = [];
+    try {
+      const parsed = JSON.parse(out);
+      apps = Array.isArray(parsed) ? parsed : [parsed];
+    } catch (_) {
+      apps = [];
+    }
+    return {
+      success: true,
+      count: apps.length,
+      windows: apps.map(a => ({ pid: a.Id, name: a.ProcessName, title: a.MainWindowTitle })),
+    };
+  }
+  return { success: false, windows: [] };
+}
+
 module.exports = {
   openApp,
   closeApp,
@@ -684,6 +866,12 @@ module.exports = {
   takeScreenshot,
   getSystemInfo,
   focusExistingWindow,
+  mediaControl,
+  windowControl,
+  clipboardControl,
+  setBrightness,
+  lockWorkstation,
+  listRunningApps,
   WEB_SERVICES,
   KNOWN_APPS: [...Object.keys(APP_MAP[PLATFORM] || {}), ...Object.keys(WEB_SERVICES)],
 };

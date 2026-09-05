@@ -615,6 +615,54 @@ app.post("/api/device/command", deviceLimiter, async (req, res) => {
   }
 
   try {
+    // 1. High-Performance Instant Dispatch (<50ms execution)
+    const fastResult = await tryFastDispatch(instruction);
+    if (fastResult && fastResult.matched) {
+      console.log(`[DeviceCommand] Fast dispatch hit for: "${instruction}" (<50ms)`);
+      const steps = (fastResult.steps || []).map((s) => ({
+        type: "action",
+        action: s.action,
+        params: s.params,
+        result: { ok: true, ...(typeof s.result === "object" ? s.result : { value: s.result }) },
+      }));
+      const snapshot = {
+        taskId: `fast_${Date.now()}`,
+        status: "done",
+        finalAnswer: fastResult.answer || "Command executed successfully, sir.",
+        log: [
+          ...steps,
+          { type: "final", content: fastResult.answer || "Command executed successfully, sir." },
+        ],
+        pendingConfirmation: null,
+      };
+      return res.json(snapshot);
+    }
+
+    // 2. Autonomous Multi-Action Goal Planner (Auto-DAG)
+    if (goalPlanner && goalPlanner.isCompoundGoal(instruction)) {
+      console.log(`[DeviceCommand] Compound goal detected: "${instruction}". Executing Auto-DAG...`);
+      const plan = await goalPlanner.decomposeIntoDAG(instruction);
+      const planResult = await goalPlanner.executePlan(plan, { sessionId: req.sessionId });
+      const steps = (planResult.executedNodes || []).map((n) => ({
+        type: "action",
+        action: n.action,
+        params: n.params,
+        result: { ok: true, ...(typeof n.result === "object" ? n.result : { value: n.result }) },
+      }));
+      const snapshot = {
+        taskId: `dag_${plan.id}`,
+        status: "done",
+        finalAnswer: planResult.summary || "Autonomous DAG workflow completed successfully, sir.",
+        log: [
+          ...steps,
+          { type: "final", content: planResult.summary || "Autonomous DAG workflow completed successfully, sir." },
+        ],
+        pendingConfirmation: null,
+      };
+      return res.json(snapshot);
+    }
+
+    // 3. Fall back to LLM Tool Loop (with offline sovereign fallback)
     const snapshot = await deviceAgent.startTask({ sessionId: req.sessionId, instruction });
     res.json(snapshot);
   } catch (err) {

@@ -95,6 +95,88 @@ function snapshot(task) {
   };
 }
 
+async function runOfflineHeuristic(task, { onStep = null } = {}) {
+  try {
+    const { tryFastDispatch } = require("../fastDispatcher");
+    const instruction = task.instruction || (task.messages && task.messages.find(m => m.role === "user")?.content) || "";
+    if (!instruction) return false;
+
+    // 1. Fast Dispatcher (<50ms execution)
+    const fastRes = await tryFastDispatch(instruction);
+    if (fastRes && fastRes.matched) {
+      console.log(`[DeviceAgent] Sovereign offline fast-dispatch resolved: "${instruction}"`);
+      task.status = "done";
+      task.finalAnswer = fastRes.answer || "Command executed successfully via sovereign device engine, sir.";
+      for (const step of (fastRes.steps || [])) {
+        const entry = {
+          type: "action",
+          action: step.action,
+          params: step.params,
+          result: { ok: true, ...(typeof step.result === "object" ? step.result : { value: step.result }) },
+        };
+        task.log.push(entry);
+        if (onStep) onStep(entry);
+      }
+      const finalEntry = { type: "final", content: task.finalAnswer };
+      task.log.push(finalEntry);
+      if (onStep) onStep(finalEntry);
+      return true;
+    }
+
+    // 2. Sovereign Local Heuristic Tool Execution
+    const clean = instruction.trim().toLowerCase();
+    let actionName = null;
+    let actionParams = {};
+
+    if (clean.includes("screenshot") || clean.includes("capture screen")) {
+      actionName = "take_screenshot";
+    } else if (clean.includes("system info") || clean.includes("system status") || clean.includes("specs")) {
+      actionName = "get_system_info";
+    } else if (clean.includes("desktop") || clean.includes("minimize all")) {
+      actionName = "window_control";
+      actionParams = { action: "show_desktop" };
+    } else if (clean.includes("lock workstation") || clean.includes("lock screen") || clean.includes("lock pc")) {
+      actionName = "lock_workstation";
+    } else if (clean.includes("running apps") || clean.includes("open windows")) {
+      actionName = "list_running_apps";
+    } else if (clean.includes("clipboard")) {
+      actionName = "clipboard_control";
+      actionParams = { action: clean.includes("clear") ? "clear" : "read" };
+    } else if (clean.startsWith("open ") || clean.startsWith("launch ")) {
+      const appName = clean.replace(/^(?:open|launch)\s+/i, "").trim();
+      if (appName) {
+        actionName = "open_app";
+        actionParams = { app: appName };
+      }
+    } else if (clean.startsWith("close ") || clean.startsWith("quit ")) {
+      const appName = clean.replace(/^(?:close|quit)\s+/i, "").trim();
+      if (appName) {
+        actionName = "close_app";
+        actionParams = { app: appName };
+      }
+    }
+
+    if (actionName) {
+      console.log(`[DeviceAgent] Sovereign offline heuristic triggered action: ${actionName}`);
+      const res = await executeAction(actionName, actionParams, { confirmed: false, sessionId: task.sessionId });
+      task.status = "done";
+      task.finalAnswer = `Executed ${actionName.replace(/_/g, " ")} autonomously via local device engine, sir.`;
+      const entry = { type: "action", action: actionName, params: actionParams, result: res };
+      task.log.push(entry);
+      if (onStep) onStep(entry);
+      const finalEntry = { type: "final", content: task.finalAnswer };
+      task.log.push(finalEntry);
+      if (onStep) onStep(finalEntry);
+      return true;
+    }
+
+    return false;
+  } catch (err) {
+    console.error("[DeviceAgent] Sovereign offline fallback failed:", err);
+    return false;
+  }
+}
+
 async function stepLoop(task, { onStep = null } = {}) {
   const model = (MODEL_REGISTRY.device_control || MODEL_REGISTRY.default).model;
   const tools = toToolDefinitions();
@@ -107,6 +189,11 @@ async function stepLoop(task, { onStep = null } = {}) {
     try {
       message = await callOpenRouterWithTools({ model, messages: task.messages, tools });
     } catch (err) {
+      console.warn(`[DeviceAgent] Model invocation failed (${err.message}). Engaging sovereign offline fallback...`);
+      const offlineHandled = await runOfflineHeuristic(task, { onStep });
+      if (offlineHandled) {
+        break;
+      }
       task.status = "error";
       task.finalAnswer = `Device agent hit an error talking to the model: ${err.message}`;
       task.log.push({ type: "error", content: task.finalAnswer });

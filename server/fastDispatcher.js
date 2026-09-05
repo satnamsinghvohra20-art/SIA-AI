@@ -199,6 +199,89 @@ async function executeSingleIntent(text) {
     return { action: "system_info", params: {}, summary: `System Status: Healthy, Memory Load: ${memMB}MB, Uptime: ${Math.round(res.uptime)}s`, result: res };
   }
 
+  // 12. Media Playback Controls
+  if (/^(?:play\/pause|play or pause|toggle playback|pause(?: music| playback)?|resume(?: music| playback)?|unpause)$/i.test(text)) {
+    const res = await system.mediaControl({ action: "play_pause" });
+    return { action: "media_control", params: { action: "play_pause" }, summary: "Toggled media playback", result: res };
+  }
+  if (/^(?:next track|next song|next music|skip song|skip track)$/i.test(text)) {
+    const res = await system.mediaControl({ action: "next" });
+    return { action: "media_control", params: { action: "next" }, summary: "Skipped to next track", result: res };
+  }
+  if (/^(?:previous track|previous song|prev track|prev song)$/i.test(text)) {
+    const res = await system.mediaControl({ action: "previous" });
+    return { action: "media_control", params: { action: "previous" }, summary: "Returned to previous track", result: res };
+  }
+  if (/^(?:stop music|stop playback|stop media)$/i.test(text)) {
+    const res = await system.mediaControl({ action: "stop" });
+    return { action: "media_control", params: { action: "stop" }, summary: "Stopped media playback", result: res };
+  }
+
+  // 13. Window & Desktop Management
+  if (/^(?:show desktop|minimize all(?: windows)?|hide all windows|go to desktop)$/i.test(text)) {
+    const res = await system.windowControl({ action: "show_desktop" });
+    return { action: "window_control", params: { action: "show_desktop" }, summary: "Showed desktop", result: res };
+  }
+  if (/^(?:minimize window|minimize this window|minimize active window)$/i.test(text)) {
+    const res = await system.windowControl({ action: "minimize" });
+    return { action: "window_control", params: { action: "minimize" }, summary: "Minimized active window", result: res };
+  }
+  if (/^(?:maximize window|maximize this window|maximize active window)$/i.test(text)) {
+    const res = await system.windowControl({ action: "maximize" });
+    return { action: "window_control", params: { action: "maximize" }, summary: "Maximized active window", result: res };
+  }
+  if (/^(?:restore window|restore active window)$/i.test(text)) {
+    const res = await system.windowControl({ action: "restore" });
+    return { action: "window_control", params: { action: "restore" }, summary: "Restored window", result: res };
+  }
+
+  // 14. Workstation Lock
+  if (/^(?:lock screen|lock workstation|lock computer|lock pc|lock this pc|lock this machine)$/i.test(text)) {
+    const res = await system.lockWorkstation({});
+    return { action: "lock_workstation", params: {}, summary: "Locked computer workstation", result: res };
+  }
+
+  // 15. Brightness Controls
+  const brightMatch = text.match(/^(?:set brightness to|adjust brightness to|change brightness to|brightness)\s+(\d+)%?$/i);
+  if (brightMatch) {
+    const pct = Math.min(100, Math.max(0, parseInt(brightMatch[1], 10)));
+    const res = await system.setBrightness({ percent: pct });
+    return { action: "set_brightness", params: { percent: pct }, summary: `Adjusted brightness to ${pct}%`, result: res };
+  }
+  if (/^(?:dim screen|dim display)$/i.test(text)) {
+    const res = await system.setBrightness({ percent: 30 });
+    return { action: "set_brightness", params: { percent: 30 }, summary: "Dimmed screen to 30%", result: res };
+  }
+  if (/^(?:brighten screen|max brightness)$/i.test(text)) {
+    const res = await system.setBrightness({ percent: 100 });
+    return { action: "set_brightness", params: { percent: 100 }, summary: "Set brightness to 100%", result: res };
+  }
+
+  // 16. Clipboard Controls
+  if (/^(?:read clipboard|get clipboard|what is in my clipboard|check clipboard|view clipboard)$/i.test(text)) {
+    const res = await system.clipboardControl({ action: "read" });
+    const preview = res.text ? `"${res.text.slice(0, 100)}"` : "empty";
+    return { action: "clipboard_control", params: { action: "read" }, summary: `Read clipboard content: ${preview}`, result: res };
+  }
+  const copyMatch = text.match(/^(?:copy|save)\s+(.+?)\s+to clipboard$/i);
+  if (copyMatch) {
+    const toCopy = copyMatch[1].trim();
+    const res = await system.clipboardControl({ action: "copy", text: toCopy });
+    return { action: "clipboard_control", params: { action: "copy", text: toCopy }, summary: `Copied to clipboard: "${toCopy.slice(0, 60)}"`, result: res };
+  }
+  if (/^(?:clear clipboard|empty clipboard)$/i.test(text)) {
+    const res = await system.clipboardControl({ action: "clear" });
+    return { action: "clipboard_control", params: { action: "clear" }, summary: "Cleared clipboard", result: res };
+  }
+
+  // 17. List Running Applications & Windows
+  if (/^(?:list running apps|list open windows|list running applications|show running apps|show open windows|what apps are open)$/i.test(text)) {
+    const res = await system.listRunningApps({});
+    const count = res.windows ? res.windows.length : 0;
+    const names = res.windows ? res.windows.slice(0, 5).map(w => w.name).join(", ") : "";
+    return { action: "list_running_apps", params: {}, summary: `Detected ${count} running application windows (${names}${count > 5 ? "..." : ""})`, result: res };
+  }
+
   return null;
 }
 
@@ -211,7 +294,7 @@ function splitCompoundClauses(text) {
   if (parts.length > 1) return parts.map(p => p.trim()).filter(Boolean);
 
   // Split on " and " followed by common action verbs
-  const verbRegex = /\s+and\s+(?=(?:open|play|search|send|launch|mute|unmute|take|switch|type)\b)/i;
+  const verbRegex = /\s+and\s+(?=(?:open|play|search|send|launch|mute|unmute|take|switch|type|pause|resume|skip|stop|minimize|maximize|restore|lock|dim|brighten|copy|read)\b)/i;
   const subParts = text.split(verbRegex);
   if (subParts.length > 1) return subParts.map(p => p.trim()).filter(Boolean);
 

@@ -108,6 +108,64 @@ const ACTIONS = {
     },
     handler: system.systemPower,
   },
+  media_control: {
+    description: "Control system audio and media playback (play_pause, next, previous, stop).",
+    risk: "safe",
+    params: {
+      type: "object",
+      properties: { action: { type: "string", enum: ["play_pause", "next", "previous", "stop"] } },
+      required: ["action"],
+    },
+    handler: system.mediaControl,
+  },
+  window_control: {
+    description: "Manage windows: show desktop / minimize all windows, or minimize, maximize, restore, or close active window.",
+    risk: "safe",
+    params: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["show_desktop", "minimize_all", "minimize", "maximize", "restore", "close"] },
+        title: { type: "string", description: "Optional window title or app name to target" },
+      },
+      required: ["action"],
+    },
+    handler: system.windowControl,
+  },
+  clipboard_control: {
+    description: "Read, copy text to, or clear the system clipboard.",
+    risk: "safe",
+    params: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["read", "copy", "clear"] },
+        text: { type: "string", description: "Text to copy to clipboard (if action is copy)" },
+      },
+      required: ["action"],
+    },
+    handler: system.clipboardControl,
+  },
+  set_brightness: {
+    description: "Adjust the display/monitor brightness level (0-100 percent).",
+    risk: "safe",
+    params: {
+      type: "object",
+      properties: { percent: { type: "number", description: "Brightness level percentage 0-100" } },
+      required: ["percent"],
+    },
+    handler: system.setBrightness,
+  },
+  lock_workstation: {
+    description: "Lock the computer workstation/screen immediately.",
+    risk: "safe",
+    params: { type: "object", properties: {} },
+    handler: system.lockWorkstation,
+  },
+  list_running_apps: {
+    description: "List all currently open windows and running desktop applications with their titles and process IDs.",
+    risk: "safe",
+    params: { type: "object", properties: {} },
+    handler: system.listRunningApps,
+  },
   list_dir: {
     description: "List files and folders in any directory on the system (e.g. Desktop, Downloads, Documents, or project folders).",
     risk: "safe",
