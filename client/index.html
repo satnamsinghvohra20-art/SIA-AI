@@ -11,10 +11,12 @@
     <!-- Sia Sovereign Telemetry Status Bar -->
     <div class="hiltron-hud-bar" id="hiltron-hud-bar">
       <div class="hud-item"><span class="hud-pulse"></span> <span class="hud-label">SIA OMNI-CORE:</span> <strong class="hud-val">ONLINE</strong></div>
-      <div class="hud-item"><span class="hud-icon">🧠</span> <span class="hud-label">SYSTEM LOAD:</span> <span class="hud-val" id="hud-memory">12 MB</span></div>
-      <div class="hud-item"><span class="hud-icon">⚡</span> <span class="hud-label">NEURAL LATENCY:</span> <span class="hud-val" id="hud-latency">&lt; 15ms</span></div>
-      <div class="hud-item"><span class="hud-icon">🌐</span> <span class="hud-label">QUANTUM ARSENAL:</span> <span class="hud-val" id="hud-models">470+ AGENTS</span></div>
-      <div class="hud-item"><span class="hud-icon">🛡️</span> <span class="hud-label">DEFENSE PROTOCOL:</span> <strong class="hud-val" style="color:var(--accent);">UNRESTRICTED</strong></div>
+      <div class="hud-item"><span class="hud-icon">🧠</span> <span class="hud-label">RAM LOAD:</span> <span class="hud-val" id="hud-memory">12 MB</span></div>
+      <div class="hud-item"><span class="hud-icon">⚡</span> <span class="hud-label">CPU:</span> <span class="hud-val" id="hud-cpu">--%</span></div>
+      <div class="hud-item"><span class="hud-icon">⚡</span> <span class="hud-label">LATENCY:</span> <span class="hud-val" id="hud-latency">&lt; 15ms</span></div>
+      <div class="hud-item"><span class="hud-icon">🌐</span> <span class="hud-label">QUANTUM ARSENAL:</span> <span class="hud-val" id="hud-models">512 AGENTS</span></div>
+      <div class="hud-item" id="hud-battery-item" hidden><span class="hud-icon">🔋</span> <span class="hud-label">BATTERY:</span> <span class="hud-val" id="hud-battery">--%</span></div>
+      <div class="hud-item" id="hud-alert-item" hidden style="background:rgba(239, 68, 68, 0.2); border:1px solid #ef4444; border-radius:4px; padding:2px 6px; color:#fca5a5;"><span class="hud-icon">⚠️</span> <span id="hud-alert-text"></span></div>
     </div>
 
     <header class="app-header">
@@ -25,6 +27,10 @@
           <span class="brand-badge hiltron-badge">SOVEREIGN CORE</span>
         </div>
         <div class="header-actions">
+          <button id="sentinel-btn" class="live-voice-btn sentinel-btn" type="button" title="View Sia Ambient Sentinel Daily Briefing & Health">
+            <span class="live-orb-mini sentinel-orb-glow"></span>
+            <span>🛡️ Sentinel</span>
+          </button>
           <button id="consensus-toggle-btn" class="live-voice-btn consensus-btn" type="button" title="Toggle Council of 3 Frontier AI Models">
             <span class="live-orb-mini consensus-orb-glow"></span>
             <span>🏛️ Council of AI</span>
@@ -353,6 +359,29 @@
         </div>
         <button type="submit" id="send-btn">Send</button>
       </form>
+    </div>
+
+    <!-- Sentinel Daily Briefing Modal -->
+    <div class="device-overlay" id="briefing-overlay" hidden>
+      <div class="device-panel" style="max-width: 580px;">
+        <div class="device-panel-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 20px;">🛡️</span>
+            <h2 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--accent);">Ambient Sentinel · Sovereign Briefing</h2>
+          </div>
+          <button id="briefing-close-btn" class="live-icon-btn" type="button" title="Close">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div style="padding: 16px 0;">
+          <div id="briefing-greeting" style="font-size: 18px; font-weight: 700; color: #38bdf8; margin-bottom: 12px;">Good morning, sir.</div>
+          <div id="briefing-text" style="font-size: 13px; line-height: 1.6; color: var(--text); margin-bottom: 16px; background: rgba(0,0,0,0.3); padding: 14px; border-radius: 8px; border-left: 3px solid var(--accent);">Loading telemetry briefing...</div>
+          <div id="briefing-stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px;"></div>
+        </div>
+      </div>
     </div>
   </div>
 

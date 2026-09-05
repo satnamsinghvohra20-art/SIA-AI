@@ -206,7 +206,7 @@ async function streamOpenRouterCompletion({
   const localResult = await generateLocalFallback({ message: typeof lastUserMsg === "string" ? lastUserMsg : "Hello" });
 
   if (onChunk) {
-    onChunk({ type: "token", text: localResult.answer, model: localResult.routing.modelLabel });
+    onChunk({ type: "token", content: localResult.answer, model: localResult.routing.modelLabel });
     onChunk({
       type: "done",
       content: localResult.answer,

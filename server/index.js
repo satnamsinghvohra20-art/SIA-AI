@@ -134,6 +134,7 @@ app.post("/api/voice-command", chatLimiter, async (req, res) => {
         await brain.appendMessage(sid, "assistant", fastResult.answer);
         return res.json({
           reply: fastResult.answer,
+          answer: fastResult.answer,
           steps: fastResult.steps,
           routing: {
             category: "fast_dispatch",
@@ -155,13 +156,18 @@ app.post("/api/voice-command", chatLimiter, async (req, res) => {
 
     if (isDeviceCommand) {
       const snapshot = await deviceAgent.startTask({ sessionId: sid, instruction: text });
-      return res.json({ reply: snapshot.finalAnswer || "Done.", steps: snapshot.log, taskId: snapshot.taskId });
+      return res.json({
+        reply: snapshot.finalAnswer || "Done.",
+        answer: snapshot.finalAnswer || "Done.",
+        steps: snapshot.log,
+        taskId: snapshot.taskId,
+      });
     }
     const persistedHistory = brain.getContextForModel(sid);
     const result = await route({ message: text, history: persistedHistory, forceModel });
     await brain.appendMessage(sid, "user", text);
     await brain.appendMessage(sid, "assistant", result.answer);
-    return res.json({ reply: result.answer, routing: result.routing });
+    return res.json({ reply: result.answer, answer: result.answer, routing: result.routing });
   } catch (err) {
     console.error("/api/voice-command failed:", err);
     res.status(500).json({ error: "Something went wrong handling that voice command." });

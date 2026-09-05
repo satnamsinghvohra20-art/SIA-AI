@@ -1847,12 +1847,13 @@ if (addFactBtn) {
   });
 }
 
-function addAssistantMessage(answer, routing, shouldSpeak = true, steps = []) {
+function addAssistantMessage(answer, routing, shouldSpeak = true, steps = [], fromCache = false, dag = null) {
   const el = document.createElement("div");
   el.className = "msg assistant";
   const category = (routing && routing.category) || "general";
   const color = `var(--route-${category}, var(--accent))`;
   const isAuto300 = routing && routing.classifiedBy === "300_model_matcher";
+  const isCacheHit = fromCache || routing?.category === "cached";
   const modelLabel = (routing && routing.modelLabel) || "Sia Assistant";
   const titleText = routing && routing.why ? `${routing.why} (Evaluated & Ranked among 300+ AI Models)` : `Model: ${modelLabel}`;
 
@@ -1868,7 +1869,6 @@ function addAssistantMessage(answer, routing, shouldSpeak = true, steps = []) {
           name: res.opened || res.to || "Web Application",
           url: url,
         });
-        // Action URL recorded for UI card preview without duplicate opening
       }
     }
   }
@@ -1877,6 +1877,7 @@ function addAssistantMessage(answer, routing, shouldSpeak = true, steps = []) {
     <div class="msg-meta">
       <div class="route-chip" style="--route-color:${color}" title="${titleText}">
         <span class="dot"></span>
+        ${isCacheHit ? `<span class="cache-hit-badge" style="font-size:10px; font-weight:700; color:#5ee0c8; margin-right:4px; letter-spacing:0.4px; background:rgba(94,224,200,0.15); border:1px solid rgba(94,224,200,0.4); padding:2px 6px; border-radius:4px;">⚡ &lt;1MS CACHE</span>` : ""}
         ${isAuto300 ? `<span class="auto-300-badge" style="font-size:10px; font-weight:700; color:#38bdf8; margin-right:4px; letter-spacing:0.4px;">✨ 300+ AUTO</span>` : ""}
         <span class="model-name">${modelLabel}</span>
         <span>· ${category.replace(/_/g, " ")}</span>
@@ -1891,6 +1892,27 @@ function addAssistantMessage(answer, routing, shouldSpeak = true, steps = []) {
   `;
 
   const bubble = el.querySelector(".bubble");
+
+  // Render Auto-DAG Checklist in REST mode if present
+  if (dag && Array.isArray(dag.steps)) {
+    const dagContainer = document.createElement("div");
+    dagContainer.className = "dag-container";
+    dagContainer.innerHTML = `
+      <div class="dag-header">
+        <span class="dag-badge">🌐 AUTONOMOUS GOAL PLANNER</span>
+        <span class="dag-step-count">${dag.totalSteps || dag.steps.length} SUB-TASKS</span>
+      </div>
+      <div class="dag-steps-list">
+        ${dag.steps.map(s => `
+          <div class="dag-step-item dag-step-${s.status || 'completed'}">
+            <span class="dag-step-icon">${s.status === 'failed' ? '❌' : '✅'}</span>
+            <span class="dag-step-title">${escapeHtml(s.title || s.task || "Task")}</span>
+          </div>
+        `).join("")}
+      </div>
+    `;
+    bubble.prepend(dagContainer);
+  }
 
   if (actionUrls.length > 0) {
     const actionContainer = document.createElement("div");
@@ -2103,6 +2125,18 @@ composer.addEventListener("submit", async (e) => {
           const col = `var(--route-${eventData.category}, var(--accent))`;
           routeChip.style.setProperty("--route-color", col);
           streamMsgEl.querySelector(".bubble").style.setProperty("--route-color", col);
+
+          const isCacheHit = eventData.fromCache || eventData.category === "cached";
+          if (isCacheHit) {
+            let cacheBadge = routeChip.querySelector(".cache-hit-badge");
+            if (!cacheBadge) {
+              cacheBadge = document.createElement("span");
+              cacheBadge.className = "cache-hit-badge";
+              cacheBadge.style.cssText = "font-size:10px; font-weight:700; color:#5ee0c8; margin-right:4px; letter-spacing:0.4px; background:rgba(94,224,200,0.15); border:1px solid rgba(94,224,200,0.4); padding:2px 6px; border-radius:4px;";
+              cacheBadge.textContent = "⚡ <1MS CACHE";
+              routeChip.insertBefore(cacheBadge, modelNameSpan);
+            }
+          }
         } else if (eventName === "reasoning") {
           accumulatedReasoning += eventData.text || "";
           reasoningAcc.hidden = false;
@@ -2608,6 +2642,7 @@ window.addEventListener("keydown", (e) => {
     if (knowledgeOverlay) knowledgeOverlay.hidden = true;
     if (modelsOverlay) modelsOverlay.hidden = true;
     if (deviceOverlay) deviceOverlay.hidden = true;
+    if (briefingOverlay) briefingOverlay.hidden = true;
   }
 });
 
@@ -2635,24 +2670,104 @@ document.addEventListener("click", async (e) => {
 });
 
 // ============================================================
-// Hiltron Real-Time Telemetry Polling
+// Ambient Sentinel Daily Briefing Modal Controls
+// ============================================================
+const sentinelBtn = document.getElementById("sentinel-btn");
+const briefingOverlay = document.getElementById("briefing-overlay");
+const briefingCloseBtn = document.getElementById("briefing-close-btn");
+const briefingGreeting = document.getElementById("briefing-greeting");
+const briefingText = document.getElementById("briefing-text");
+const briefingStatsGrid = document.getElementById("briefing-stats-grid");
+
+async function openSentinelBriefing() {
+  if (!briefingOverlay) return;
+  briefingOverlay.hidden = false;
+  try {
+    const res = await fetch("/api/sentinel/briefing");
+    const data = await res.json();
+    if (data.ok && data.briefing) {
+      if (briefingGreeting) briefingGreeting.textContent = data.briefing.greeting || "Good day, sir.";
+      if (briefingText) briefingText.textContent = data.briefing.briefing;
+      if (briefingStatsGrid && data.briefing.telemetry) {
+        const t = data.briefing.telemetry;
+        briefingStatsGrid.innerHTML = `
+          <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); text-align:center;">
+            <div style="font-size:11px; color:var(--text-dim);">CPU LOAD</div>
+            <div style="font-size:18px; font-weight:700; color:#38bdf8; margin-top:4px;">${t.cpuLoad}%</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); text-align:center;">
+            <div style="font-size:11px; color:var(--text-dim);">HOST RAM</div>
+            <div style="font-size:18px; font-weight:700; color:#5ee0c8; margin-top:4px;">${t.memUsagePct}%</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); text-align:center;">
+            <div style="font-size:11px; color:var(--text-dim);">UPTIME</div>
+            <div style="font-size:18px; font-weight:700; color:#c084fc; margin-top:4px;">${t.uptimeHours}h</div>
+          </div>
+        `;
+      }
+    }
+  } catch (err) {
+    if (briefingText) briefingText.textContent = "Failed to load telemetry briefing: " + err.message;
+  }
+}
+
+if (sentinelBtn) sentinelBtn.addEventListener("click", openSentinelBriefing);
+if (briefingCloseBtn && briefingOverlay) briefingCloseBtn.addEventListener("click", () => briefingOverlay.hidden = true);
+
+// ============================================================
+// Hiltron Real-Time Telemetry Polling (Health + Ambient Sentinel)
 // ============================================================
 async function updateHiltronTelemetry() {
   const hudMemory = document.getElementById("hud-memory");
+  const hudCpu = document.getElementById("hud-cpu");
   const hudLatency = document.getElementById("hud-latency");
   const hudModels = document.getElementById("hud-models");
+  const hudBatteryItem = document.getElementById("hud-battery-item");
+  const hudBattery = document.getElementById("hud-battery");
+  const hudAlertItem = document.getElementById("hud-alert-item");
+  const hudAlertText = document.getElementById("hud-alert-text");
   if (!hudMemory) return;
 
   const t0 = performance.now();
   try {
-    const res = await fetch("/api/health");
+    const [healthRes, sentinelRes] = await Promise.all([
+      fetch("/api/health").catch(() => null),
+      fetch("/api/sentinel/status").catch(() => null),
+    ]);
     const latency = Math.round(performance.now() - t0);
-    if (res.ok) {
-      const data = await res.json();
+    if (hudLatency) hudLatency.textContent = `${latency}ms`;
+
+    if (healthRes && healthRes.ok) {
+      const data = await healthRes.json();
       hudMemory.textContent = `${data.memoryUsageMB || 12} MB`;
-      if (hudLatency) hudLatency.textContent = `${latency}ms`;
       if (hudModels && data.modelsCatalogTotal) {
-        hudModels.textContent = `${data.modelsCatalogTotal}+ QUANTUM AGENTS`;
+        hudModels.textContent = `${data.modelsCatalogTotal}+ AGENTS`;
+      }
+    }
+
+    if (sentinelRes && sentinelRes.ok) {
+      const sData = await sentinelRes.json();
+      const report = sData.report;
+      if (report) {
+        if (hudCpu && report.cpuLoad !== undefined) {
+          hudCpu.textContent = `${report.cpuLoad}%`;
+        }
+        if (hudBatteryItem && hudBattery) {
+          if (report.batteryLevel !== null && report.batteryLevel !== undefined) {
+            hudBattery.textContent = `${report.batteryLevel}%`;
+            hudBatteryItem.hidden = false;
+          } else {
+            hudBatteryItem.hidden = true;
+          }
+        }
+        if (hudAlertItem && hudAlertText) {
+          if (report.alert) {
+            hudAlertText.textContent = report.alert;
+            hudAlertItem.hidden = false;
+          } else {
+            hudAlertItem.hidden = true;
+          }
+        }
       }
     }
   } catch (_) {
@@ -2660,6 +2775,6 @@ async function updateHiltronTelemetry() {
   }
 }
 
-setInterval(updateHiltronTelemetry, 12000);
-setTimeout(updateHiltronTelemetry, 1000);
+setInterval(updateHiltronTelemetry, 10000);
+setTimeout(updateHiltronTelemetry, 800);
 

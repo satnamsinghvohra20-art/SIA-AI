@@ -11,6 +11,7 @@ class AmbientSentinel {
     this.interval = null;
     this.heartbeatMs = 60 * 1000; // 60 seconds
     this.lastBriefingDate = null;
+    this.previousCpuTimes = this._getCpuTimes();
     this.latestTelemetry = {
       cpuLoad: 0,
       freeMemMB: 0,
@@ -22,6 +23,37 @@ class AmbientSentinel {
       alert: null,
       timestamp: Date.now(),
     };
+  }
+
+  _getCpuTimes() {
+    try {
+      const cpus = os.cpus();
+      let idle = 0;
+      let total = 0;
+      for (const cpu of cpus) {
+        for (const type in cpu.times) {
+          total += cpu.times[type];
+        }
+        idle += cpu.times.idle;
+      }
+      return { idle, total };
+    } catch (_) {
+      return { idle: 0, total: 1 };
+    }
+  }
+
+  _calculateCpuLoad() {
+    const current = this._getCpuTimes();
+    if (!this.previousCpuTimes) {
+      this.previousCpuTimes = current;
+      return 0;
+    }
+    const idleDiff = current.idle - this.previousCpuTimes.idle;
+    const totalDiff = current.total - this.previousCpuTimes.total;
+    this.previousCpuTimes = current;
+    if (totalDiff <= 0) return 0;
+    const loadPct = Math.round((1 - idleDiff / totalDiff) * 100);
+    return Math.max(0, Math.min(100, loadPct));
   }
 
   start() {
@@ -44,14 +76,17 @@ class AmbientSentinel {
       const freeMem = Math.round(os.freemem() / (1024 * 1024));
       const memUsagePct = Math.round(((totalMem - freeMem) / totalMem) * 100);
       const uptimeHours = Number((os.uptime() / 3600).toFixed(1));
+      const cpuLoad = this._calculateCpuLoad();
 
       let alert = null;
       if (memUsagePct > 92) {
         alert = `⚠️ High Memory Load Warning: System RAM usage is at ${memUsagePct}%. Consider closing idle applications.`;
+      } else if (cpuLoad > 92) {
+        alert = `⚠️ High CPU Load Warning: CPU utilization is at ${cpuLoad}%.`;
       }
 
       this.latestTelemetry = {
-        cpuLoad: os.loadavg ? os.loadavg()[0] || 0 : 0,
+        cpuLoad,
         freeMemMB: freeMem,
         totalMemMB: totalMem,
         memUsagePct,
