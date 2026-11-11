@@ -64,8 +64,7 @@ async function runScript({ name, args = [] }) {
   const match = files.find((f) => path.basename(f, path.extname(f)) === name);
 
   if (!match) {
-    // If not found in scripts folder, try running as direct command
-    return runCommand({ command: `${name} ${(args || []).join(" ")}` });
+    throw new Error(`Script "${name}" is not in the approved scripts folder.`);
   }
 
   const ext = path.extname(match);
