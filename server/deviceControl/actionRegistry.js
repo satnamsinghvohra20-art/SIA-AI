@@ -187,7 +187,7 @@ const ACTIONS = {
   },
   write_file: {
     description: "Create or overwrite any file on the filesystem with specified content.",
-    risk: "safe",
+    risk: "risky",
     params: {
       type: "object",
       properties: { file: { type: "string", description: "File path" }, content: { type: "string", description: "File content" } },
@@ -197,7 +197,7 @@ const ACTIONS = {
   },
   move_file: {
     description: "Move or rename any file or directory.",
-    risk: "safe",
+    risk: "risky",
     params: {
       type: "object",
       properties: { from: { type: "string" }, to: { type: "string" } },
@@ -207,7 +207,7 @@ const ACTIONS = {
   },
   delete_file: {
     description: "Delete a file or folder from the filesystem.",
-    risk: "safe",
+    risk: "risky",
     params: {
       type: "object",
       properties: { file: { type: "string" } },
@@ -219,7 +219,7 @@ const ACTIONS = {
   run_command: {
     description:
       "Execute any shell, terminal, or system command directly on the host computer (PowerShell, Bash, CMD, Node, Python, Git, etc.).",
-    risk: "safe",
+    risk: "risky",
     params: {
       type: "object",
       properties: {
@@ -234,7 +234,7 @@ const ACTIONS = {
   run_script: {
     description:
       "Run a script by name from server/deviceControl/scripts/ or execute as a system command.",
-    risk: "safe",
+    risk: "risky",
     params: {
       type: "object",
       properties: {
@@ -249,7 +249,7 @@ const ACTIONS = {
   send_whatsapp_message: {
     description:
       "Send or draft a WhatsApp message to a contact name or phone number on WhatsApp Web or WhatsApp Desktop. Reuses the already open WhatsApp window if present without opening a new browser tab.",
-    risk: "safe",
+    risk: "risky",
     params: {
       type: "object",
       properties: {
