@@ -1,3 +1,4 @@
+
 require("dotenv").config();
 const express = require("express");
 const path = require("path");
@@ -366,11 +367,11 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
     });
 
     await brain.appendMessage(sessionId, "user", userText);
-    await brain.appendMessage(sessionId, "assistant", streamResult.content);
+    await brain.appendMessage(sessionId, "assistant", streamResult.answer);
 
     sendEvent("done", {
       ok: true,
-      answer: streamResult.content,
+      answer: streamResult.answer,
       reasoning: streamResult.reasoning,
     });
     res.end();
