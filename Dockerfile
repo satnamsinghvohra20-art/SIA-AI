@@ -20,7 +20,8 @@ RUN mkdir -p data/memory data/device/screenshots
 
 # Set environment variables
 ENV NODE_ENV=production \
-    PORT=3000
+    PORT=3000 \
+    HOST=0.0.0.0
 
 # Expose server and websocket port
 EXPOSE 3000

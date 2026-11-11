@@ -31,6 +31,17 @@ trying to launch. What's below is real and prioritized; use it as-is.
       global "see everyone's history" endpoint; still worth removing or
       hiding behind an admin-only check before a public launch.
 - [x] **`.gitignore` added** — covers `.env`, `data/`, `node_modules/`.
+- [x] **Runtime memory excluded from Git** — session files are local-only;
+      per-user chat history and knowledge files are not repository content.
+- [x] **Risky device actions require approval** — destructive file actions,
+      command execution, calls, and messages pause before execution; fast-path
+      dispatch cannot bypass that approval step.
+- [x] **Device file sandbox** — file actions stay under `SIA_DEVICE_ROOT`,
+      including symlink-resolved path checks.
+- [x] **Session-scoped response cache** — cached answers never cross browser
+      sessions.
+- [x] **Iteration-limit accuracy** — the agent reports an incomplete task
+      when it reaches its step cap instead of claiming success.
 - [x] **Error messages sanitized for the client** — `/api/chat` no longer
       forwards raw OpenRouter error text (which can include account/billing
       details) to the browser; full detail still goes to server logs.
@@ -62,11 +73,11 @@ trying to launch. What's below is real and prioritized; use it as-is.
 - [ ] Usage dashboard (spend by category, by model, by day)
 
 ### Core UX
-- [ ] Streaming responses (README already flags this — biggest perceived-speed win)
+- [x] Streaming responses
 - [ ] Markdown rendering in the chat bubble (currently plain text — code blocks look bad)
 - [ ] Copy-to-clipboard button on responses
 - [ ] Edit-and-resend a previous message
-- [ ] Stop/cancel button for an in-flight request
+- [x] Stop/cancel button for an in-flight request
 - [ ] Mobile-responsive layout check
 
 ### Data safety

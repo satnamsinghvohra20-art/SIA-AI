@@ -41,7 +41,8 @@ one key instead of juggling a dozen provider accounts. Swap any model in
 npm install
 
 # 2. Add your API key
-cp .env.example .env
+# Windows PowerShell: Copy-Item .env.example .env
+# macOS/Linux: cp .env.example .env
 # then edit .env and paste your key from https://openrouter.ai/keys
 
 # 3. Run it
@@ -103,8 +104,10 @@ plan checklist, decision log, and any blockers needing your attention.
 ## Auth & sessions
 
 Set `SIA_PASSWORD` in `.env` and every `/api/*` route (except `/api/login`)
-requires it — a login overlay appears in the UI automatically. Leave it
-unset for local-only use and Sia runs open, with a warning on boot.
+requires it — a login overlay appears in the UI automatically. By default
+Sia binds only to `127.0.0.1` for local use. If you configure `HOST` to a
+non-loopback address or run in production, `SIA_PASSWORD` is required before
+the server starts. Never commit `.env`; use `.env.example` as a blank template.
 
 Every browser gets its own signed `sia_session` cookie on first visit, and
 that id is what isolates one person's chat/task history from another's —
@@ -130,7 +133,8 @@ model you want.
 
 ## Next steps you might want to add
 
-- **Streaming responses** (currently waits for the full answer before showing it)
+- **More launch hardening** — request timeouts, model fallback, spend limits,
+  and structured cost/latency tracking
 - **Cost tracking** — OpenRouter returns token usage per call; log it per category
 - **Multi-model consensus mode** — send the same prompt to 2-3 models and compare answers
 - **File/image upload** for the vision category

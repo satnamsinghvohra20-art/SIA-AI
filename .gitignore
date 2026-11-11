@@ -26,6 +26,9 @@ pnpm-debug.log*
 # Runtime & Scratch Data
 data/device/screenshots/*
 !data/device/screenshots/.gitkeep
+data/device/files/
+data/sessions/
+data/device/paired/
 tmp/
 scratch/
 test*.js
