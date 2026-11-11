@@ -41,10 +41,10 @@ const ELEVENLABS_VOICES = {
   liam: { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam (Young & Energetic)" },
 };
 
-// Rate limits (Unrestricted for seamless local usage)
+// Sensible per-IP defaults to protect provider spend and device actions.
 const chatLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10000,
+  limit: 60,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests — slow down and try again in a few minutes." },
@@ -52,7 +52,7 @@ const chatLimiter = rateLimit({
 
 const deviceLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10000,
+  limit: 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many device-control requests — slow down and try again in a few minutes." },
@@ -60,7 +60,7 @@ const deviceLimiter = rateLimit({
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 1000,
+  limit: 10,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many login attempts — try again later." },
@@ -253,7 +253,7 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
       }
 
       // 1C. Sub-Millisecond Semantic LRU Cache (<1ms execution)
-      const cached = semanticCache.get(userText);
+      const cached = semanticCache.get(userText, { scope: sessionId });
       if (cached) {
         await brain.appendMessage(sessionId, "user", userText);
         await brain.appendMessage(sessionId, "assistant", cached.answer);
@@ -515,7 +515,7 @@ app.post("/api/chat", chatLimiter, async (req, res) => {
         });
       }
 
-      const cached = semanticCache.get(message);
+      const cached = semanticCache.get(message, { scope: sessionId });
       if (cached) {
          await brain.appendMessage(sessionId, "user", message);
          await brain.appendMessage(sessionId, "assistant", cached.answer);
@@ -576,7 +576,7 @@ app.post("/api/chat", chatLimiter, async (req, res) => {
     await brain.appendMessage(sessionId, "assistant", result.answer);
 
     // Save to Semantic LRU Cache for sub-millisecond future recall
-    semanticCache.set(message, result);
+    semanticCache.set(message, result, { scope: sessionId });
 
     res.json(result);
   } catch (err) {
@@ -783,9 +783,16 @@ app.get("/api/cache/stats", (req, res) => {
   res.json({ ok: true, stats: semanticCache.getStats() });
 });
 
-const PORT = process.env.PORT || 3000;
-const httpServer = app.listen(PORT, () => {
-  console.log(`Sia orchestrator running at http://localhost:${PORT}`);
+const PORT = Number(process.env.PORT) || 3000;
+const HOST = process.env.HOST || (process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1");
+const isLoopbackHost = HOST === "localhost" || HOST === "::1" || HOST.startsWith("127.");
+
+if (!isLoopbackHost && !auth.authEnabled()) {
+  throw new Error("SIA_PASSWORD is required when Sia listens on a non-loopback host.");
+}
+
+const httpServer = app.listen(PORT, HOST, () => {
+  console.log(`Sia orchestrator running at http://${HOST}:${PORT}`);
   ambientSentinel.start();
 
   if (!process.env.OPENROUTER_API_KEY) {

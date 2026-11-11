@@ -77,8 +77,8 @@ class SemanticCache {
     return dynamicKeywords.some((k) => t.includes(k));
   }
 
-  get(rawQuery) {
-    if (!rawQuery || this.isNonCacheable(rawQuery)) {
+  get(rawQuery, { scope } = {}) {
+    if (!scope || !rawQuery || this.isNonCacheable(rawQuery)) {
       this.misses++;
       return null;
     }
@@ -87,18 +87,19 @@ class SemanticCache {
     if (!norm) return null;
 
     const now = Date.now();
+    const cacheKey = `${scope}\0${norm}`;
 
     // 1. Exact Match (O(1) lookup < 0.01ms)
-    if (this.cache.has(norm)) {
-      const entry = this.cache.get(norm);
+    if (this.cache.has(cacheKey)) {
+      const entry = this.cache.get(cacheKey);
       if (now - entry.timestamp < this.ttlMs) {
         // Refresh LRU position
-        this.cache.delete(norm);
-        this.cache.set(norm, entry);
+        this.cache.delete(cacheKey);
+        this.cache.set(cacheKey, entry);
         this.hits++;
         return { ...entry, fromCache: true, matchType: "exact" };
       } else {
-        this._evict(norm);
+        this._evict(cacheKey);
       }
     }
 
@@ -117,7 +118,7 @@ class SemanticCache {
 
       for (const key of candidateKeys) {
         const entry = this.cache.get(key);
-        if (!entry) continue;
+        if (!entry || entry.scope !== scope) continue;
 
         if (now - entry.timestamp > this.ttlMs) {
           this._evict(key);
@@ -138,15 +139,16 @@ class SemanticCache {
     return null;
   }
 
-  set(rawQuery, data) {
-    if (!rawQuery || !data || this.isNonCacheable(rawQuery)) return;
+  set(rawQuery, data, { scope } = {}) {
+    if (!scope || !rawQuery || !data || this.isNonCacheable(rawQuery)) return;
 
     const norm = this.normalize(rawQuery);
     if (!norm) return;
+    const cacheKey = `${scope}\0${norm}`;
 
     // If key already exists, clean up old index entries
-    if (this.cache.has(norm)) {
-      this._evict(norm);
+    if (this.cache.has(cacheKey)) {
+      this._evict(cacheKey);
     }
 
     // Evict oldest entry if at capacity
@@ -162,10 +164,11 @@ class SemanticCache {
       steps: data.steps || [],
       timestamp: Date.now(),
       tokens,
+      scope,
     };
 
-    this.cache.set(norm, entry);
-    this._addTokens(norm, tokens);
+    this.cache.set(cacheKey, entry);
+    this._addTokens(cacheKey, tokens);
   }
 
   clear() {
