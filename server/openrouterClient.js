@@ -69,6 +69,8 @@ async function streamOpenRouterCompletion({
   max_tokens = 500,
   temperature = 0.7,
   onChunk,
+  signal,
+  timeoutMs = 60000,
 }) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
@@ -79,9 +81,15 @@ async function streamOpenRouterCompletion({
   const activeCandidates = candidatePool.filter((m) => !isModelQuarantined(m));
   const modelsToTry = activeCandidates.length > 0 ? activeCandidates : candidatePool;
   let lastError = null;
+  let emittedOutput = false;
 
   for (const currentModel of modelsToTry) {
     let effectiveMaxTokens = max_tokens;
+    const controller = new AbortController();
+    const abortFromCaller = () => controller.abort(signal?.reason);
+    if (signal?.aborted) abortFromCaller();
+    else signal?.addEventListener("abort", abortFromCaller, { once: true });
+    const timeoutId = setTimeout(() => controller.abort(new Error("OpenRouter stream timed out.")), timeoutMs);
     try {
       let response = await fetch(OPENROUTER_URL, {
         method: "POST",
@@ -98,6 +106,7 @@ async function streamOpenRouterCompletion({
           temperature,
           stream: true,
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -122,6 +131,7 @@ async function streamOpenRouterCompletion({
               temperature,
               stream: true,
             }),
+            signal: controller.signal,
           });
         }
         if (!response.ok) {
@@ -165,6 +175,7 @@ async function streamOpenRouterCompletion({
             // Extract normal content
             if (delta.content) {
               fullContent += delta.content;
+              emittedOutput = true;
               if (onChunk) onChunk({ type: "token", content: delta.content, model: currentModel });
             }
 
@@ -172,6 +183,7 @@ async function streamOpenRouterCompletion({
             const reasoning = delta.reasoning_content || delta.reasoning;
             if (reasoning) {
               fullReasoning += reasoning;
+              emittedOutput = true;
               if (onChunk) onChunk({ type: "reasoning", text: reasoning, model: currentModel });
             }
           } catch (_) {}
@@ -196,6 +208,13 @@ async function streamOpenRouterCompletion({
     } catch (err) {
       console.warn(`[OpenRouter Stream] Model ${currentModel} failed (${err.message}). Attempting failover...`);
       lastError = err;
+      if (signal?.aborted) throw err;
+      // Once tokens have reached the user, switching models would splice two
+      // different answers together. Stop and report the interrupted stream.
+      if (emittedOutput) throw err;
+    } finally {
+      clearTimeout(timeoutId);
+      signal?.removeEventListener("abort", abortFromCaller);
     }
   }
 

@@ -197,8 +197,13 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
   }
 
   const sendEvent = (event, data) => {
+    if (res.destroyed || res.writableEnded) return;
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   };
+  const streamController = new AbortController();
+  res.on("close", () => {
+    if (!res.writableEnded) streamController.abort();
+  });
 
   try {
     // 1. Autonomous Multi-Step Goal Planner (Auto-DAG)
@@ -353,6 +358,7 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
     const streamResult = await streamOpenRouterCompletion({
       model: targetModel,
       messages,
+      signal: streamController.signal,
       onChunk: ({ content, reasoning, done, model }) => {
         if (reasoning) {
           sendEvent("reasoning", { text: reasoning });
@@ -376,6 +382,7 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
     });
     res.end();
   } catch (err) {
+    if (streamController.signal.aborted) return;
     console.error("[SSE Stream Error]:", err);
     sendEvent("error", { error: err.message || "Streaming failed." });
     res.end();
