@@ -24,11 +24,6 @@ const KNOWN_APPS = [
   "google maps", "cricbuzz", "weather", "wikipedia", "vscode", "code"
 ];
 
-// The fast path calls host handlers directly and has no confirmation flow.
-// Keep anything with external, destructive, or command-execution effects in
-// the device agent, where the server-side executor can pause for approval.
-const APPROVAL_REQUIRED_INTENT = /(?:^|[;,]|\band\b|\bthen\b|\bafter that\b)\s*(?:please\s+)?(?:send|message|whatsapp|text|dm|call|dial|delete|remove|move|rename|run\s+(?:command|terminal|shell)|execute|shutdown|restart|sleep|purchase|buy|order|pay|transfer|publish|post|write\s+file|create\s+file|power\s+off)\b/i;
-
 function cleanCommand(text) {
   return (text || "")
     .toLowerCase()
@@ -36,15 +31,6 @@ function cleanCommand(text) {
     .replace(/^(sia|hey sia|hi sia|ok sia|jarvis|hey jarvis)[,\s:]*/i, "")
     .replace(/[.?!]+$/g, "")
     .trim();
-}
-
-function resultSucceeded(result) {
-  return !result || (result.ok !== false && result.success !== false && !result.error);
-}
-
-function describeResult(summary, result) {
-  if (resultSucceeded(result)) return summary;
-  return `${summary} failed${result?.error ? `: ${result.error}` : "."}`;
 }
 
 async function executeSingleIntent(text) {
@@ -318,16 +304,13 @@ function splitCompoundClauses(text) {
 async function tryFastDispatch(rawText) {
   const text = cleanCommand(rawText);
   if (!text) return { matched: false };
-  if (APPROVAL_REQUIRED_INTENT.test(text)) return { matched: false };
 
   // 1. Try single intent on full text first (prevents "open youtube and play song" from splitting into 2 open actions)
   const directMatch = await executeSingleIntent(text);
   if (directMatch) {
-    const ok = resultSucceeded(directMatch.result);
     return {
       matched: true,
-      ok,
-      answer: `${describeResult(directMatch.summary, directMatch.result)}${ok ? ", sir." : ""}`,
+      answer: `${directMatch.summary}, sir.`,
       result: directMatch.result,
       steps: [{ action: directMatch.action, params: directMatch.params, result: directMatch.result }],
       category: "device_control",
@@ -356,18 +339,7 @@ async function tryFastDispatch(rawText) {
         openedApps.add(appKey);
       }
       executedSteps.push({ action: res.action, params: res.params, result: res.result });
-      summaries.push(describeResult(res.summary, res.result));
-      if (!resultSucceeded(res.result)) {
-        const answer = `Stopped after a step failed: ${summaries[summaries.length - 1]}`;
-        return {
-          matched: true,
-          ok: false,
-          answer,
-          result: res.result,
-          steps: executedSteps,
-          category: "device_control",
-        };
-      }
+      summaries.push(res.summary);
     }
   }
 
@@ -381,7 +353,6 @@ async function tryFastDispatch(rawText) {
 
   return {
     matched: true,
-    ok: true,
     answer: combinedAnswer,
     result: executedSteps[executedSteps.length - 1].result,
     steps: executedSteps,

@@ -1,4 +1,5 @@
-const { callOpenRouter } = require("./openrouterClient");
+const { callOpenRouter, isFreeTierAccount } = require("./openrouterClient");
+const { getModelForCategory } = require("./modelRegistry");
 
 /**
  * CLASSIFIER (Instant 0ms Heuristic + Ultra-Fast LLM Fallback)
@@ -224,17 +225,20 @@ function heuristicClassify(text) {
 
 async function llmClassify(text) {
   const categories = Object.keys(require("./modelRegistry").MODEL_REGISTRY).filter(
-    (c) => c !== "default"
+    (c) => c !== "default" && c !== "super_blend"
   );
 
   const systemPrompt = `You are an ultra-fast task classifier. Classify the user's prompt into exactly one of these categories: ${categories.join(
     ", "
   )}. Reply with ONLY the category name and nothing else.`;
 
+  const fastClassifierModel = getModelForCategory("ultra_fast_chat", {
+    freeTier: isFreeTierAccount(),
+  }).model;
+
   try {
-    const fastModel = require("./modelRegistry").MODEL_REGISTRY.fast_general.model;
     const result = await callOpenRouter({
-      model: fastModel,
+      model: fastClassifierModel,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: text },
@@ -255,6 +259,14 @@ async function classify(text) {
   if (heuristicGuess) {
     return { category: heuristicGuess, method: "heuristic" };
   }
+
+  // Only pay the latency of an LLM classification call if the prompt hints at
+  // an implicit device/system/app action that regex didn't catch.
+  const maybeDeviceAction = /\b(app|screen|window|tab|browser|phone|mobile|pc|computer|laptop|desktop|file|folder|whatsapp|instagram|youtube|spotify|volume|battery|brightness|wifi|bluetooth|notify|notification)\b/i.test(text);
+  if (!maybeDeviceAction) {
+    return { category: "default", method: "instant_zero_ms" };
+  }
+
   const llmGuess = await llmClassify(text);
   return { category: llmGuess, method: "llm" };
 }

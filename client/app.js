@@ -199,6 +199,7 @@ const CATEGORY_ICONS = {
   witty_unfiltered: "🔥",
   math_science: "⚛️",
   finance_business: "📈",
+  super_blend: "⚡",
 };
 
 let allModelsList = [];
@@ -1694,7 +1695,7 @@ function updateConsensusUI() {
     consensusToggleBtn.classList.add("active");
     consensusToggleBtn.style.borderColor = "#a78bfa";
     consensusToggleBtn.style.background = "rgba(167, 139, 250, 0.15)";
-    input.placeholder = "🏛️ Ask the Council of 3 Specialist AI Models (Claude, Gemini, DeepSeek)...";
+    input.placeholder = "🏛️ Ask the Council of Multi-Model AI Specialists (parallel deliberation & fusion)...";
   } else {
     consensusToggleBtn.classList.remove("active");
     consensusToggleBtn.style.borderColor = "";

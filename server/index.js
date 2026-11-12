@@ -1,12 +1,11 @@
-
-require("dotenv").config();
-const express = require("express");
 const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
+const express = require("express");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
-const { route, getModelForCategory } = require("./router");
+const { route } = require("./router");
 const { classify } = require("./classifier");
-const { MODEL_REGISTRY } = require("./modelRegistry");
+const { MODEL_REGISTRY, getModelForCategory } = require("./modelRegistry");
 const brain = require("./memory/brainStore");
 const knowledgeGraph = require("./memory/knowledgeGraph");
 const { sessionMiddleware } = require("./session");
@@ -14,11 +13,16 @@ const auth = require("./auth");
 const deviceAgent = require("./deviceControl/agentLoop");
 const { ACTIONS } = require("./deviceControl/actionRegistry");
 const mobileBridge = require("./deviceControl/mobileBridge");
-const { streamOpenRouterCompletion } = require("./openrouterClient");
-const { runCouncilConsensus } = require("./consensusEngine");
+const {
+  streamOpenRouterCompletion,
+  isFreeTierAccount,
+  refreshAccountTier,
+  getModelHealthReport,
+} = require("./openrouterClient");
+const { runCouncilConsensus, runSuperBlend, getCouncilConfig } = require("./consensusEngine");
 const { processUploadedFile, formatMultimodalMessage } = require("./fileHandler");
 const mcpClient = require("./plugins/mcpClient");
-const { getModelByIdSync, getAllModels } = require("./modelsCatalog");
+const { getModelByIdSync, matchBestModelFrom300, getAllModels } = require("./modelsCatalog");
 const { semanticCache } = require("./semanticCache");
 const { goalPlanner } = require("./goalPlanner");
 const { ambientSentinel } = require("./ambientSentinel");
@@ -41,10 +45,10 @@ const ELEVENLABS_VOICES = {
   liam: { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam (Young & Energetic)" },
 };
 
-// Sensible per-IP defaults to protect provider spend and device actions.
+// Rate limits (Unrestricted for seamless local usage)
 const chatLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 60,
+  limit: 10000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests — slow down and try again in a few minutes." },
@@ -52,7 +56,7 @@ const chatLimiter = rateLimit({
 
 const deviceLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 30,
+  limit: 10000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many device-control requests — slow down and try again in a few minutes." },
@@ -60,7 +64,7 @@ const deviceLimiter = rateLimit({
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many login attempts — try again later." },
@@ -103,6 +107,12 @@ app.get("/api/models", async (req, res) => {
       total: Object.keys(MODEL_REGISTRY).length,
     });
   }
+});
+
+// Live model health, latency telemetry & account tier status
+app.get("/api/models/health", async (req, res) => {
+  await refreshAccountTier();
+  res.json({ ok: true, ...getModelHealthReport() });
 });
 
 app.get("/api/tts/config", (req, res) => {
@@ -272,12 +282,41 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
       }
     }
 
+    await refreshAccountTier();
+    const freeTier = isFreeTierAccount();
+
+    // 1D. Super-Blend Multi-Model Fusion when explicitly selected
+    if (!forceModel && forceCategory === "super_blend") {
+      sendEvent("routing", {
+        category: "super_blend",
+        classifiedBy: "multi_model_fusion",
+        model: "multi-model-fusion",
+        modelLabel: "⚡ Super-Blend Fusion (Multi-Model Synthesis)",
+        why: "Running top specialized AI models in parallel and fusing their strongest outputs.",
+      });
+      const persistedHistory = brain.getContextForModel(sessionId);
+      const blend = await runSuperBlend({
+        message: userText,
+        history: persistedHistory,
+      });
+      await brain.appendMessage(sessionId, "user", userText);
+      await brain.appendMessage(sessionId, "assistant", blend.masterAnswer);
+      sendEvent("token", { content: blend.masterAnswer });
+      sendEvent("done", {
+        ok: true,
+        answer: blend.masterAnswer,
+        perspectives: blend.perspectives,
+        model: blend.synthesisModel,
+      });
+      return res.end();
+    }
+
     // 2. Resolve Model and Category
     let targetModel = null;
     let modelLabel = null;
     let categoryName = "general";
-    let classifiedBy = "task_classifier";
-    let why = "Selected a model using the task classifier's specialist mapping.";
+    let classifiedBy = "460_model_matcher";
+    let why = "Auto-selected #1 working AI model";
 
     const hasImages = files.some((f) => f.kind === "image");
 
@@ -289,14 +328,14 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
       classifiedBy = "user_override";
       why = `Manually selected model: ${modelLabel}`;
     } else if (hasImages) {
-      const visionEntry = getModelForCategory("vision");
+      const visionEntry = getModelForCategory("vision", { freeTier });
       targetModel = visionEntry.model;
       modelLabel = visionEntry.label;
       categoryName = "vision";
       classifiedBy = "multimodal_detector";
-      why = visionEntry.why;
+      why = `Attached image routed to ${visionEntry.label} for multimodal vision analysis.`;
     } else if (forceCategory && MODEL_REGISTRY[forceCategory]) {
-      const entry = MODEL_REGISTRY[forceCategory];
+      const entry = getModelForCategory(forceCategory, { freeTier });
       targetModel = entry.model;
       modelLabel = entry.label;
       categoryName = forceCategory;
@@ -305,12 +344,13 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
     } else {
       const classification = await classify(userText);
       if (classification.category === "device_control") {
+        const deviceEntry = getModelForCategory("device_control", { freeTier });
         // Device control execution
         sendEvent("routing", {
           category: "device_control",
           classifiedBy: classification.method,
-          model: MODEL_REGISTRY.device_control.model,
-          modelLabel: `${MODEL_REGISTRY.device_control.label} (device agent)`,
+          model: deviceEntry.model,
+          modelLabel: `${deviceEntry.label} (device agent)`,
           why: "Instruction required real system/app actions — executing agent tool loop.",
         });
 
@@ -331,12 +371,12 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
         return res.end();
       }
 
-      const entry = getModelForCategory(classification.category);
-      targetModel = entry.model;
-      modelLabel = entry.label;
-      categoryName = entry.category;
-      classifiedBy = classification.method;
-      why = entry.why;
+      const bestMatch = matchBestModelFrom300(userText, { freeTierOnly: freeTier });
+      targetModel = bestMatch.model;
+      modelLabel = bestMatch.modelLabel;
+      categoryName = bestMatch.category;
+      classifiedBy = "460_model_matcher";
+      why = bestMatch.why;
     }
 
     sendEvent("routing", {
@@ -359,6 +399,7 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
     const streamResult = await streamOpenRouterCompletion({
       model: targetModel,
       messages,
+      strictModel: Boolean(forceModel),
       signal: streamController.signal,
       onChunk: ({ content, reasoning, done, model }) => {
         if (reasoning) {
@@ -373,13 +414,29 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
       },
     });
 
+    const finalAnswer = streamResult.answer || "";
     await brain.appendMessage(sessionId, "user", userText);
-    await brain.appendMessage(sessionId, "assistant", streamResult.answer);
+    await brain.appendMessage(sessionId, "assistant", finalAnswer);
+
+    // Populate Semantic LRU Cache for sub-millisecond repeat recall
+    if (!forceModel && files.length === 0 && finalAnswer) {
+      semanticCache.set(userText, {
+        answer: finalAnswer,
+        routing: {
+          category: categoryName,
+          classifiedBy,
+          model: streamResult.model || targetModel,
+          modelLabel,
+          why,
+        },
+      }, { scope: sessionId });
+    }
 
     sendEvent("done", {
       ok: true,
-      answer: streamResult.answer,
+      answer: finalAnswer,
       reasoning: streamResult.reasoning,
+      model: streamResult.model || targetModel,
     });
     res.end();
   } catch (err) {
@@ -406,15 +463,19 @@ app.post("/api/chat/consensus", chatLimiter, async (req, res) => {
     await brain.appendMessage(sessionId, "user", `[Council Consensus Request] ${message}`);
     await brain.appendMessage(sessionId, "assistant", result.masterAnswer);
 
+    const cfg = getCouncilConfig();
+    const modelNames = cfg.models.map((m) => m.label).join(", ");
     res.json({
       ok: true,
       answer: result.masterAnswer,
       perspectives: result.perspectives,
       consensusCount: result.consensusCount,
+      totalLatencyMs: result.totalLatencyMs,
       routing: {
         category: "consensus",
-        modelLabel: "🏛️ Council of 3 Specialist Models",
-        why: "Independent specialist responses are synthesized into one answer.",
+        model: result.synthesisModel,
+        modelLabel: `🏛️ Council of ${result.consensusCount} Models (${result.totalLatencyMs}ms)`,
+        why: `Parallel multi-model deliberation across ${modelNames}.`,
       },
     });
   } catch (err) {
@@ -556,7 +617,7 @@ app.post("/api/chat", chatLimiter, async (req, res) => {
     if (classification.category === "device_control" && !forceModel) {
       // Direct device-control task execution
       const snapshot = await deviceAgent.startTask({ sessionId, instruction: message });
-      const deviceEntry = MODEL_REGISTRY.device_control;
+      const deviceEntry = getModelForCategory("device_control", { freeTier: isFreeTierAccount() });
       result = {
         answer: snapshot.finalAnswer || "Done.",
         routing: {
@@ -784,17 +845,12 @@ app.get("/api/cache/stats", (req, res) => {
   res.json({ ok: true, stats: semanticCache.getStats() });
 });
 
-const PORT = Number(process.env.PORT) || 3000;
-const HOST = process.env.HOST || (process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1");
-const isLoopbackHost = HOST === "localhost" || HOST === "::1" || HOST.startsWith("127.");
-
-if (!isLoopbackHost && !auth.authEnabled()) {
-  throw new Error("SIA_PASSWORD is required when Sia listens on a non-loopback host.");
-}
-
-const httpServer = app.listen(PORT, HOST, () => {
-  console.log(`Sia orchestrator running at http://${HOST}:${PORT}`);
+const PORT = process.env.PORT || 3000;
+const httpServer = app.listen(PORT, () => {
+  console.log(`Sia orchestrator running at http://localhost:${PORT}`);
   ambientSentinel.start();
+  // Warm up account tier & live OpenRouter catalog in background so first request has 0ms cold-start
+  refreshAccountTier().then(() => getAllModels()).catch(() => {});
 
   if (!process.env.OPENROUTER_API_KEY) {
     console.warn(

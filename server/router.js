@@ -1,36 +1,43 @@
 const { classify } = require("./classifier");
-const { MODEL_REGISTRY } = require("./modelRegistry");
-const { callOpenRouter } = require("./openrouterClient");
+const { MODEL_REGISTRY, getModelForCategory } = require("./modelRegistry");
+const { callOpenRouter, isFreeTierAccount, refreshAccountTier } = require("./openrouterClient");
+const { runSuperBlend } = require("./consensusEngine");
 const siaIdentity = require("./siaIdentity");
+const { getModelByIdSync, matchBestModelFrom300 } = require("./modelsCatalog");
 
 /**
  * ROUTER
  * ------
  * The main orchestration function:
- *   1. classify the incoming task
- *   2. look up the best model for that category
- *   3. call it — WITH Sia's own capability system prompt prepended, so
- *      whichever model answers knows what Sia can actually do (see
- *      siaIdentity.js — this is what fixes "it says it doesn't know
- *      WhatsApp": previously nothing told the model Sia has that ability)
- *   4. return the answer + which model/category was used (for transparency)
+ *   1. Ensure account tier (free vs paid) is known so 0ms is wasted on 402s
+ *   2. Handle Super-Blend Multi-Model Fusion when requested
+ *   3. Classify task & match the #1 working model from 460+ live models
+ *   4. Call with Sia's identity system prompt & return answer + routing metadata
  */
-const { getModelByIdSync } = require("./modelsCatalog");
-
-function getModelForCategory(category) {
-  const categoryName = MODEL_REGISTRY[category] ? category : "default";
-  return {
-    category: categoryName,
-    ...MODEL_REGISTRY[categoryName],
-  };
-}
-
 async function route({ message, history = [], forceCategory = null, forceModel = null }) {
+  await refreshAccountTier();
+  const freeTier = isFreeTierAccount();
+
+  if (!forceModel && forceCategory === "super_blend") {
+    const blend = await runSuperBlend({ message, history });
+    return {
+      answer: blend.masterAnswer,
+      routing: {
+        category: "super_blend",
+        classifiedBy: "multi_model_fusion",
+        model: blend.synthesisModel,
+        modelLabel: `⚡ Super-Blend Fusion (${blend.consensusCount} Models · ${blend.totalLatencyMs}ms)`,
+        why: "Combined multiple top AI specialists in parallel and synthesized the strongest verified answer.",
+      },
+      perspectives: blend.perspectives,
+    };
+  }
+
   let targetModel = null;
   let modelLabel = null;
   let categoryName = "general";
-  let classifiedBy = "task_classifier";
-  let why = "Selected a model using the task classifier's specialist mapping.";
+  let classifiedBy = "460_model_matcher";
+  let why = "Auto-selected #1 working AI model";
 
   if (forceModel) {
     targetModel = forceModel;
@@ -40,7 +47,7 @@ async function route({ message, history = [], forceCategory = null, forceModel =
     classifiedBy = "user_override";
     why = `Manually selected model: ${modelLabel}`;
   } else if (forceCategory && MODEL_REGISTRY[forceCategory]) {
-    const entry = MODEL_REGISTRY[forceCategory];
+    const entry = getModelForCategory(forceCategory, { freeTier });
     targetModel = entry.model;
     modelLabel = entry.label;
     categoryName = forceCategory;
@@ -48,12 +55,21 @@ async function route({ message, history = [], forceCategory = null, forceModel =
     why = entry.why;
   } else {
     const classification = await classify(message);
-    const entry = getModelForCategory(classification.category);
-    targetModel = entry.model;
-    modelLabel = entry.label;
-    categoryName = entry.category;
-    classifiedBy = classification.method;
-    why = entry.why;
+    if (classification.category === "device_control") {
+      const entry = getModelForCategory("device_control", { freeTier });
+      targetModel = entry.model;
+      modelLabel = entry.label;
+      categoryName = "device_control";
+      classifiedBy = classification.method;
+      why = entry.why;
+    } else {
+      const bestMatch = matchBestModelFrom300(message, { freeTierOnly: freeTier });
+      targetModel = bestMatch.model;
+      modelLabel = bestMatch.modelLabel;
+      categoryName = bestMatch.category;
+      classifiedBy = "460_model_matcher";
+      why = bestMatch.why;
+    }
   }
 
   const messages = [
@@ -62,18 +78,21 @@ async function route({ message, history = [], forceCategory = null, forceModel =
     { role: "user", content: message },
   ];
 
-  const answer = await callOpenRouter({
+  const res = await callOpenRouter({
     model: targetModel,
     messages,
+    strictModel: Boolean(forceModel),
+    returnMetadata: true,
   });
 
   return {
-    answer,
+    answer: res.content,
     routing: {
       category: categoryName,
       classifiedBy,
-      model: targetModel,
+      model: res.model || targetModel,
       modelLabel,
+      latencyMs: res.latencyMs,
       why,
     },
   };

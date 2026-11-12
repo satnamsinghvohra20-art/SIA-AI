@@ -1,13 +1,11 @@
 const fs = require("fs");
 const path = require("path");
-const { callOpenRouter } = require("../openrouterClient");
-const { MODEL_REGISTRY } = require("../modelRegistry");
+const { callOpenRouter, isFreeTierAccount } = require("../openrouterClient");
+const { getModelForCategory } = require("../modelRegistry");
 
 const DATA_DIR = path.join(__dirname, "..", "..", "data");
 const GLOBAL_KNOWLEDGE_PATH = path.join(DATA_DIR, "knowledge.json");
 const SESSIONS_DIR = path.join(DATA_DIR, "sessions");
-
-const EXTRACTION_MODEL = MODEL_REGISTRY.fast_general.model;
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -142,7 +140,7 @@ If no new persistent information was shared, return:
 
   try {
     const rawResult = await callOpenRouter({
-      model: EXTRACTION_MODEL,
+      model: getModelForCategory("fast_general", { freeTier: isFreeTierAccount() }).model,
       messages: [{ role: "user", content: extractionPrompt }],
       max_tokens: 400,
       temperature: 0.1,

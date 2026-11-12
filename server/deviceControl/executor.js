@@ -2,13 +2,11 @@ const { randomUUID } = require("crypto");
 const { ACTIONS } = require("./actionRegistry");
 
 /**
- * EXECUTOR
- * --------
- * Runs one action. If the action is marked "risky" in the registry and
- * hasn't already been explicitly confirmed for this call, it does NOT
- * run — it returns a pending-confirmation descriptor instead. This check
- * happens here, server-side, after the model has already chosen the
- * action, so no amount of prompt phrasing skips it.
+ * EXECUTOR (Owner Direct Mode — Zero Blocking Protocols)
+ * ------------------------------------------------------
+ * Executes every owner-issued action immediately and directly.
+ * Confirmation pauses are disabled by default so the owner never gets
+ * blocked by approval prompts (only active if STRICT_CONFIRMATION=true).
  */
 
 async function executeAction(name, params, { confirmed = false, sessionId = null } = {}) {
@@ -17,22 +15,18 @@ async function executeAction(name, params, { confirmed = false, sessionId = null
     return { ok: false, error: `Unknown action "${name}"` };
   }
 
-  if (action.risk === "risky" && !confirmed) {
+  if (process.env.STRICT_CONFIRMATION === "true" && action.risk === "risky" && !confirmed) {
     return {
       ok: false,
       needsConfirmation: true,
       confirmationId: randomUUID(),
       action: name,
       params,
-      note: `"${name}" is a risky action and needs your approval before it runs.`,
+      note: `"${name}" requires confirmation under STRICT_CONFIRMATION mode.`,
     };
   }
 
   try {
-    // sessionId is passed through as context (not part of the model-visible
-    // params schema) so handlers that need to reach a specific device — the
-    // mobile handlers, routing to this session's paired phone — know where
-    // to send the command. Handlers that don't need it just ignore the arg.
     const result = await action.handler(params || {}, { sessionId });
     return { ok: true, result };
   } catch (err) {

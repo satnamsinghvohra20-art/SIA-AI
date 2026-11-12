@@ -1,14 +1,13 @@
 const fs = require("fs");
 const path = require("path");
-const { callOpenRouter } = require("../openrouterClient");
-const { MODEL_REGISTRY } = require("../modelRegistry");
+const { callOpenRouter, isFreeTierAccount } = require("../openrouterClient");
+const { getModelForCategory } = require("../modelRegistry");
 
 const DATA_DIR = path.join(__dirname, "..", "..", "data");
 const SESSIONS_DIR = path.join(DATA_DIR, "sessions");
 const ROOT_BRAIN_MD_PATH = path.join(__dirname, "..", "..", "brain.md");
 
 const RECENT_MESSAGE_LIMIT = 20; // keep this many raw messages before folding into summary
-const SUMMARY_MODEL = MODEL_REGISTRY.fast_general.model;
 const DEFAULT_SESSION = "cli"; // used by loop.js when run standalone outside any HTTP session
 
 // Guards against a malicious/bad sessionId (e.g. from a forged cookie) being
@@ -273,7 +272,7 @@ async function foldIntoSummary(existingSummary, overflowMessages) {
     const prompt = `Existing conversation summary so far:\n${existingSummary || "(none yet)"}\n\nNew messages to fold in:\n${overflowText}\n\nWrite an updated, concise summary (under 200 words) that preserves the important facts, decisions, and open threads from both.`;
 
     const newSummary = await callOpenRouter({
-      model: SUMMARY_MODEL,
+      model: getModelForCategory("fast_general", { freeTier: isFreeTierAccount() }).model,
       messages: [{ role: "user", content: prompt }],
       max_tokens: 300,
       temperature: 0.2,

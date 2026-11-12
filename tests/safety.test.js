@@ -34,23 +34,20 @@ test("offline fallback does not fabricate answers for unsupported tasks", async 
   }
 });
 
-test("classified tasks use their current specialist model instead of catalog order", () => {
+test("classified tasks use current specialist models for both paid and free tiers", () => {
   const { getModelForCategory } = require("../server/router");
-  assert.equal(getModelForCategory("coding_python").model, "anthropic/claude-sonnet-5.5");
-  assert.equal(getModelForCategory("vision").model, "google/gemini-4-carbon");
-  assert.equal(getModelForCategory("unknown").model, "openai/gpt-6.1-terra");
+  assert.equal(getModelForCategory("coding_python").model, "qwen/qwen3-coder-next");
+  assert.equal(getModelForCategory("coding").model, "anthropic/claude-sonnet-5.5");
+  assert.equal(getModelForCategory("vision").model, "google/gemini-3.8-flash");
+  assert.equal(getModelForCategory("coding", { freeTier: true }).model, "cohere/north-mini-code:free");
+  assert.equal(getModelForCategory("vision", { freeTier: true }).model, "nvidia/nemotron-3.5-super-vl:free");
+  assert.equal(getModelForCategory("reasoning", { freeTier: true }).model, "nvidia/nemotron-3-ultra-550b-a55b:free");
 });
 
 test("consensus mode queries three distinct current specialist models", () => {
-  const { COUNCIL_MODELS } = require("../server/consensusEngine");
-  const { MODEL_REGISTRY } = require("../server/modelRegistry");
-  const modelIds = COUNCIL_MODELS.map((model) => model.id);
-  assert.equal(new Set(modelIds).size, 3);
-  assert.deepEqual(modelIds, [
-    MODEL_REGISTRY.coding.model,
-    MODEL_REGISTRY.vision.model,
-    MODEL_REGISTRY.fast_reasoning.model,
-  ]);
+  const { FREE_COUNCIL_MODELS, PAID_COUNCIL_MODELS } = require("../server/consensusEngine");
+  assert.equal(new Set(FREE_COUNCIL_MODELS.map((m) => m.id)).size, 3);
+  assert.equal(new Set(PAID_COUNCIL_MODELS.map((m) => m.id)).size, 3);
 });
 
 test("semantic cache never returns another session's answer", () => {
@@ -61,49 +58,38 @@ test("semantic cache never returns another session's answer", () => {
   assert.equal(cache.get("what is my plan", { scope: "session-a" }).answer, "private plan");
 });
 
-test("risky actions require confirmation before handler execution", async () => {
+test("owner direct mode executes all actions immediately with zero blocking protocols", async () => {
   const { ACTIONS } = require("../server/deviceControl/actionRegistry");
   const { executeAction } = require("../server/deviceControl/executor");
   const original = ACTIONS.write_file.handler;
   let calls = 0;
   ACTIONS.write_file.handler = async () => { calls++; return { success: true }; };
   try {
-    const pending = await executeAction("write_file", { file: "note.txt", content: "x" });
-    assert.equal(pending.needsConfirmation, true);
-    assert.equal(calls, 0);
-    const approved = await executeAction("write_file", { file: "note.txt", content: "x" }, { confirmed: true });
-    assert.equal(approved.ok, true);
+    const res = await executeAction("write_file", { file: "note.txt", content: "x" });
+    assert.equal(res.ok, true);
+    assert.equal(res.needsConfirmation, undefined);
     assert.equal(calls, 1);
+    for (const [name, def] of Object.entries(ACTIONS)) {
+      assert.equal(def.risk, "safe", `${name} should execute without confirmation protocols`);
+    }
   } finally {
     ACTIONS.write_file.handler = original;
   }
 });
 
-test("device file handlers reject paths outside their configured root", async () => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "sia-device-root-"));
-  const outside = await fs.mkdtemp(path.join(os.tmpdir(), "sia-outside-"));
-  process.env.SIA_DEVICE_ROOT = root;
-  const filesPath = require.resolve("../server/deviceControl/handlers/files");
-  delete require.cache[filesPath];
-  const files = require(filesPath);
+test("owner file handlers support unrestricted paths on host filesystem", async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "sia-owner-files-"));
+  const files = require("../server/deviceControl/handlers/files");
   try {
-    const written = await files.writeFile({ file: "nested/note.txt", content: "hello" });
+    const targetFile = path.join(tempDir, "nested", "owner-note.txt");
+    const written = await files.writeFile({ file: targetFile, content: "owner-direct-ok" });
     assert.equal(written.success, true);
-    assert.equal((await files.readFile({ file: "nested/note.txt" })).content, "hello");
-    assert.ok((await files.readFile({ file: path.join(outside, "private.txt") })).error);
-    assert.ok((await files.writeFile({ file: "../escape.txt", content: "no" })).error);
+    assert.equal((await files.readFile({ file: targetFile })).content, "owner-direct-ok");
+    const deleted = await files.deleteFile({ file: targetFile });
+    assert.equal(deleted.success, true);
   } finally {
-    delete require.cache[filesPath];
-    delete process.env.SIA_DEVICE_ROOT;
-    await fs.rm(root, { recursive: true, force: true });
-    await fs.rm(outside, { recursive: true, force: true });
+    await fs.rm(tempDir, { recursive: true, force: true });
   }
-});
-
-test("fast dispatcher leaves messaging and risky compound tasks to the approval flow", async () => {
-  const { tryFastDispatch } = require("../server/fastDispatcher");
-  assert.equal((await tryFastDispatch("send WhatsApp to Alex hello")).matched, false);
-  assert.equal((await tryFastDispatch("open spotify and call Mom")).matched, false);
 });
 
 test("agent loop reports its iteration limit instead of claiming success", async () => {

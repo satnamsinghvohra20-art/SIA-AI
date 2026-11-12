@@ -1,9 +1,11 @@
 const system = require("./handlers/system");
-const { callOpenRouter } = require("../openrouterClient");
-const { MODEL_REGISTRY } = require("../modelRegistry");
+const { callOpenRouter, isFreeTierAccount } = require("../openrouterClient");
+const { getModelForCategory } = require("../modelRegistry");
 const fs = require("fs/promises");
 
-const VISION_MODEL = MODEL_REGISTRY.vision.model;
+function getVisionModel() {
+  return getModelForCategory("vision_fast", { freeTier: isFreeTierAccount() }).model;
+}
 
 /**
  * VISION GROUNDING AGENT
@@ -37,7 +39,7 @@ Return a JSON object ONLY with the following schema:
 }`;
 
     const rawResponse = await callOpenRouter({
-      model: VISION_MODEL,
+      model: getVisionModel(),
       messages: [
         {
           role: "user",
@@ -88,7 +90,7 @@ Return a JSON object ONLY:
 }`;
 
     const rawResponse = await callOpenRouter({
-      model: VISION_MODEL,
+      model: getVisionModel(),
       messages: [
         {
           role: "user",

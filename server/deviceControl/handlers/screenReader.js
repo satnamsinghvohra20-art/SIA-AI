@@ -2,8 +2,8 @@ const fs = require("fs").promises;
 const path = require("path");
 const { execFile } = require("child_process");
 const system = require("./system");
-const { callOpenRouter } = require("../../openrouterClient");
-const { MODEL_REGISTRY } = require("../../modelRegistry");
+const { callOpenRouter, isFreeTierAccount } = require("../../openrouterClient");
+const { getModelForCategory } = require("../../modelRegistry");
 
 function getActiveWindowSummary() {
   if (process.platform !== "win32") return Promise.resolve("");
@@ -72,7 +72,7 @@ Instructions:
 4. Keep your answer direct, structured, and easy to speak out loud in 2-4 sentences.`;
 
   const extractedText = await callOpenRouter({
-    model: MODEL_REGISTRY.vision.model,
+    model: getModelForCategory("vision", { freeTier: isFreeTierAccount() }).model,
     messages: [
       {
         role: "user",
@@ -116,7 +116,7 @@ Instructions:
 3. Summarize the contents clearly and concisely in 2-3 sentences.`;
 
   const analysis = await callOpenRouter({
-    model: MODEL_REGISTRY.vision.model,
+    model: getModelForCategory("vision", { freeTier: isFreeTierAccount() }).model,
     messages: [
       {
         role: "user",
