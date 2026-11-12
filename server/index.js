@@ -4,7 +4,7 @@ const express = require("express");
 const path = require("path");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
-const { route } = require("./router");
+const { route, getModelForCategory } = require("./router");
 const { classify } = require("./classifier");
 const { MODEL_REGISTRY } = require("./modelRegistry");
 const brain = require("./memory/brainStore");
@@ -18,7 +18,7 @@ const { streamOpenRouterCompletion } = require("./openrouterClient");
 const { runCouncilConsensus } = require("./consensusEngine");
 const { processUploadedFile, formatMultimodalMessage } = require("./fileHandler");
 const mcpClient = require("./plugins/mcpClient");
-const { getModelByIdSync, matchBestModelFrom300, getAllModels } = require("./modelsCatalog");
+const { getModelByIdSync, getAllModels } = require("./modelsCatalog");
 const { semanticCache } = require("./semanticCache");
 const { goalPlanner } = require("./goalPlanner");
 const { ambientSentinel } = require("./ambientSentinel");
@@ -276,8 +276,8 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
     let targetModel = null;
     let modelLabel = null;
     let categoryName = "general";
-    let classifiedBy = "300_model_matcher";
-    let why = "Auto-selected #1 AI model among 300+ models";
+    let classifiedBy = "task_classifier";
+    let why = "Selected a model using the task classifier's specialist mapping.";
 
     const hasImages = files.some((f) => f.kind === "image");
 
@@ -289,11 +289,12 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
       classifiedBy = "user_override";
       why = `Manually selected model: ${modelLabel}`;
     } else if (hasImages) {
-      targetModel = "google/gemini-2.0-flash-001";
-      modelLabel = "Gemini 2.0 Flash (Multimodal Vision)";
+      const visionEntry = getModelForCategory("vision");
+      targetModel = visionEntry.model;
+      modelLabel = visionEntry.label;
       categoryName = "vision";
       classifiedBy = "multimodal_detector";
-      why = "Attached image routed to Google Gemini 2.0 Flash for vision analysis.";
+      why = visionEntry.why;
     } else if (forceCategory && MODEL_REGISTRY[forceCategory]) {
       const entry = MODEL_REGISTRY[forceCategory];
       targetModel = entry.model;
@@ -330,12 +331,12 @@ app.post("/api/chat/stream", chatLimiter, async (req, res) => {
         return res.end();
       }
 
-      const bestMatch = matchBestModelFrom300(userText);
-      targetModel = bestMatch.model;
-      modelLabel = bestMatch.modelLabel;
-      categoryName = bestMatch.category;
-      classifiedBy = "300_model_matcher";
-      why = bestMatch.why;
+      const entry = getModelForCategory(classification.category);
+      targetModel = entry.model;
+      modelLabel = entry.label;
+      categoryName = entry.category;
+      classifiedBy = classification.method;
+      why = entry.why;
     }
 
     sendEvent("routing", {
@@ -412,8 +413,8 @@ app.post("/api/chat/consensus", chatLimiter, async (req, res) => {
       consensusCount: result.consensusCount,
       routing: {
         category: "consensus",
-        modelLabel: "🏛️ Council of 3 Flagship Models",
-        why: "Multi-model deliberation across Claude 3.5 Sonnet, DeepSeek R1, and GPT-4o.",
+        modelLabel: "🏛️ Council of 3 Specialist Models",
+        why: "Independent specialist responses are synthesized into one answer.",
       },
     });
   } catch (err) {

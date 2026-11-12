@@ -1694,7 +1694,7 @@ function updateConsensusUI() {
     consensusToggleBtn.classList.add("active");
     consensusToggleBtn.style.borderColor = "#a78bfa";
     consensusToggleBtn.style.background = "rgba(167, 139, 250, 0.15)";
-    input.placeholder = "🏛️ Ask the Council of 3 Flagship AI Models (Claude, DeepSeek, GPT-4o)...";
+    input.placeholder = "🏛️ Ask the Council of 3 Specialist AI Models (Claude, Gemini, DeepSeek)...";
   } else {
     consensusToggleBtn.classList.remove("active");
     consensusToggleBtn.style.borderColor = "";

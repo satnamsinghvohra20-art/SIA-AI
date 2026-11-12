@@ -1,201 +1,156 @@
 /**
- * MODEL REGISTRY (26+ Specialized AI Models)
- * --------------------------------------------
- * Maps each task category to the absolute best OpenRouter model
- * for that specific superpower, ensuring maximum speed, intelligence,
- * and accuracy with zero mistakes.
- *
- * Browse catalog: https://openrouter.ai/models
+ * Task-specialized OpenRouter models.
+ * IDs are checked against the live catalog; update this shortlist as models change.
  */
 
+const MODELS = {
+  fast: "deepseek/deepseek-v4.1-flash",
+  general: "openai/gpt-6.1-terra",
+  flagship: "openai/gpt-6.1-sol",
+  coding: "anthropic/claude-sonnet-5.5",
+  reasoning: "anthropic/claude-opus-5.5",
+  vision: "google/gemini-4-carbon",
+  research: "perplexity/sonar",
+  top: "anthropic/claude-fable-5.2",
+  open: "moonshotai/kimi-k3.1-pro",
+  multilingual: "qwen/qwen3.8-flash",
+};
+
 const MODEL_REGISTRY = {
-  // 1. Heavy coding, system architecture, refactoring & bug fixing
   coding: {
-    model: "anthropic/claude-sonnet-5",
-    label: "Claude Sonnet 5 (Coding Flagship)",
-    why: "Industry-leading coding architecture, hybrid reasoning, and multi-file refactoring",
+    model: MODELS.coding,
+    label: "Claude Sonnet 5.5 (Coding)",
+    why: "Strong coding model for implementation, debugging, and architecture.",
   },
-
-  // 2. High-speed, high-accuracy code generation & scripting
   coding_fast: {
-    model: "qwen/qwen-2.5-coder-32b-instruct",
-    label: "Qwen 2.5 Coder 32B (Fast Code)",
-    why: "Ultra-low latency, specialized for fast syntax, algorithms, and script generation",
+    model: MODELS.fast,
+    label: "DeepSeek V4.1 Flash (Fast Coding)",
+    why: "Fast, low-cost model with coding support.",
   },
-
-  // 3. Python, backend, APIs, databases & logic architecture
   coding_python: {
-    model: "qwen/qwen-2.5-coder-32b-instruct",
-    label: "Qwen 2.5 Coder 32B (Python & Backend)",
-    why: "Deep code model optimized for Python, APIs, and backend logic",
+    model: MODELS.coding,
+    label: "Claude Sonnet 5.5 (Python & Backend)",
+    why: "Capable model for multi-step backend and Python work.",
   },
-
-  // 4. Advanced mathematical reasoning, STEM proofs, hard logic
   reasoning: {
-    model: "openai/o4-mini",
-    label: "OpenAI o4-mini (STEM & Math)",
-    why: "Deep multi-step reasoning, mathematical proofs, and logic puzzles",
+    model: MODELS.reasoning,
+    label: "Claude Opus 5.5 (Reasoning)",
+    why: "Flagship reasoning for difficult analytical tasks.",
   },
-
-  // 5. Open deep chain-of-thought step-by-step reasoning
   deep_thinking: {
-    model: "deepseek/deepseek-r1",
-    label: "DeepSeek R1 (Deep Reasoning)",
-    why: "Top-tier open reasoning model with transparent chain-of-thought thinking",
+    model: MODELS.top,
+    label: "Claude Fable 5.2 (Flagship)",
+    why: "Top-ranked model by OpenRouter usage on the current leaderboard.",
   },
-
-  // 6. Fast open-source mathematical & logic reasoning
   fast_reasoning: {
-    model: "deepseek/deepseek-r1-distill-llama-70b",
-    label: "DeepSeek R1 Distill 70B (Fast Logic)",
-    why: "Combines Llama 70B architecture with DeepSeek R1 reasoning speed",
+    model: MODELS.fast,
+    label: "DeepSeek V4.1 Flash (Fast Reasoning)",
+    why: "Fast, low-cost reasoning for everyday logic and STEM questions.",
   },
-
-  // 7. Long-form creative writing, storytelling, essays, marketing copy
   creative: {
-    model: "anthropic/claude-sonnet-5",
-    label: "Claude Sonnet 5 (Creative & Prose)",
-    why: "Masterful nuanced prose, narrative storytelling, and human-like eloquence",
+    model: MODELS.coding,
+    label: "Claude Sonnet 5.5 (Creative)",
+    why: "Strong general-purpose writing and instruction following.",
   },
-
-  // 8. High-speed brainstorming, slogans, creative copy & drafting
   creative_fast: {
-    model: "anthropic/claude-haiku-4.5",
-    label: "Claude Haiku 4.5 (Fast Creative)",
-    why: "Ultra-fast creative drafting, brainstorming, and punchy copywriting",
+    model: MODELS.general,
+    label: "GPT-6.1 Terra (Fast Writing)",
+    why: "Cost-efficient model for short drafts and rewrites.",
   },
-
-  // 9. Live web research with verified source citations & deep reasoning
   research: {
-    model: "google/gemini-2.5-pro",
-    label: "Gemini 2.5 Pro (Deep Research)",
-    why: "Deep multimodal research and comprehensive factual exploration",
+    model: MODELS.research,
+    label: "Perplexity Sonar (Web Research)",
+    why: "Web-search-oriented model that returns source citations.",
   },
-
-  // 10. Instant real-time web search, current news & quick fact lookups
   research_fast: {
-    model: "google/gemini-2.5-flash",
-    label: "Gemini 2.5 Flash (Fast Search)",
-    why: "Sub-second search and synthesis for breaking news and quick facts",
+    model: MODELS.research,
+    label: "Perplexity Sonar (Quick Research)",
+    why: "Fast web-backed answers with citations.",
   },
-
-  // 11. Multimodal visual understanding (charts, diagrams, UI, complex images)
   vision: {
-    model: "google/gemini-2.5-pro",
-    label: "Gemini 2.5 Pro (Deep Vision)",
-    why: "Google's flagship multimodal model for complex image analysis and diagrams",
+    model: MODELS.vision,
+    label: "Gemini 4 Carbon (Vision)",
+    why: "Multimodal model supporting images, documents, audio, and video.",
   },
-
-  // 12. Real-time visual OCR, screenshots & instant photo inspection
   vision_fast: {
-    model: "google/gemini-2.5-flash",
-    label: "Gemini 2.5 Flash (Fast Vision/OCR)",
-    why: "Instant image recognition, screenshot reading, and document OCR",
+    model: MODELS.fast,
+    label: "DeepSeek V4.1 Flash (Fast Vision)",
+    why: "Low-cost image-capable model for straightforward visual questions.",
   },
-
-  // 13. Massive 2M token context window (entire codebases, books, huge PDFs)
   long_context: {
-    model: "google/gemini-2.5-pro",
-    label: "Gemini 2.5 Pro (2M Token Context)",
-    why: "Up to 2,000,000 token context window for massive document analysis",
+    model: MODELS.coding,
+    label: "Claude Sonnet 5.5 (Long Context)",
+    why: "Supports a one-million-token context window for long documents.",
   },
-
-  // 14. High-speed general everyday knowledge & conversation
   fast_general: {
-    model: "openai/gpt-5.4-mini",
-    label: "GPT-5.4 Mini (Fast General)",
-    why: "Sub-200ms latency, high reliability, and broad general knowledge",
+    model: MODELS.fast,
+    label: "DeepSeek V4.1 Flash (Fast General)",
+    why: "High-throughput, low-cost model for everyday questions.",
   },
-
-  // 15. Lowest latency instant conversational chat (<100ms)
   ultra_fast_chat: {
-    model: "openai/gpt-4o-mini",
-    label: "GPT-4o Mini (Ultra-Fast)",
-    why: "Extreme low latency for quick greetings, one-liner answers, and rapid dialogue",
+    model: MODELS.fast,
+    label: "DeepSeek V4.1 Flash (Quick Chat)",
+    why: "Lightweight option for short conversational requests.",
   },
-
-  // 16. OpenAI flagship multimodal intelligence
   flagship_omni: {
-    model: "openai/gpt-5.5",
-    label: "GPT-5.5 (Flagship Omni)",
-    why: "High-capability multimodal reasoning and natural conversational intelligence",
+    model: MODELS.top,
+    label: "Claude Fable 5.2 (Flagship)",
+    why: "High-capability model for difficult reasoning, coding, and long-context tasks.",
   },
-
-  // 17. Fast and efficient everyday OpenAI tasks
   gpt_fast: {
-    model: "openai/gpt-5.4-mini",
-    label: "GPT-5.4 Mini (Fast General)",
-    why: "Lightweight, highly capable model for rapid daily tasks and summaries",
+    model: MODELS.general,
+    label: "GPT-6.1 Terra (Fast General)",
+    why: "Cost-efficient general model with structured-output support.",
   },
-
-  // 18. Structured JSON, tabular data, CSV parsing & schema validation
   data: {
-    model: "openai/gpt-5.4-mini",
-    label: "GPT-5.4 Mini (Structured Data & JSON)",
-    why: "Flawless structured JSON extraction and deterministic schema mapping",
+    model: MODELS.general,
+    label: "GPT-6.1 Terra (Structured Data)",
+    why: "Supports structured outputs for extraction and data transformation.",
   },
-
-  // 19. Device-control agent loop (tool calling for Edge, Windows & Mobile)
   device_control: {
-    model: "openai/gpt-4o-mini",
-    label: "GPT-4o Mini (Device & Tool Agent)",
-    why: "Gold standard for ultra-fast OpenAI function/tool calling and multi-step device actions",
+    model: MODELS.fast,
+    label: "DeepSeek V4.1 Flash (Device Agent)",
+    why: "Fast tool-calling model for the device-control agent.",
   },
-
-  // 20. Meta's open-weights flagship foundation model
   open_source: {
-    model: "meta-llama/llama-3.3-70b-instruct",
-    label: "Llama 3.3 70B (Meta Open Source)",
-    why: "Meta's flagship open-weights model with world-class general intelligence",
+    model: MODELS.open,
+    label: "Kimi K3.1 Pro (Open Weights)",
+    why: "Open-weight multimodal reasoning model.",
   },
-
-  // 21. The world's largest open foundation model (70B parameter fast)
   open_source_giant: {
-    model: "meta-llama/llama-3.1-70b-instruct",
-    label: "Llama 3.1 70B (Open Source Giant)",
-    why: "Massive 70B parameter open model with superior reasoning capabilities",
+    model: MODELS.open,
+    label: "Kimi K3.1 Pro (Open Weights)",
+    why: "Open-weight multimodal model with a large context window.",
   },
-
-  // 22. Multilingual translation, cross-language reasoning & global dialect
   multilingual: {
-    model: "qwen/qwen-2.5-72b-instruct",
-    label: "Qwen 2.5 72B (Multilingual & Global)",
-    why: "Superior multilingual fluency across 100+ languages and translation",
+    model: MODELS.multilingual,
+    label: "Qwen 3.8 Flash (Multilingual)",
+    why: "Multimodal model suited to multilingual and coding assistance.",
   },
-
-  // 23. Cybersecurity, code vulnerability auditing & enterprise logic
   cybersecurity: {
-    model: "meta-llama/llama-3.3-70b-instruct",
-    label: "Llama 3.3 70B (Security & Audit)",
-    why: "Specialized in security auditing, rigorous logical critique, and enterprise workloads",
+    model: MODELS.coding,
+    label: "Claude Sonnet 5.5 (Security Review)",
+    why: "Strong code-analysis model for defensive security review.",
   },
-
-  // 24. Truth-seeking, witty real-time intelligence
   witty_unfiltered: {
-    model: "meta-llama/llama-3.3-70b-instruct",
-    label: "Llama 3.3 70B (Witty & Unfiltered)",
-    why: "Open weights foundation model with witty personality and high agility",
+    model: MODELS.general,
+    label: "GPT-6.1 Terra (General)",
+    why: "Cost-efficient model for conversational writing.",
   },
-
-  // 25. High-speed scientific calculations & DeepSeek V3 general intelligence
   math_science: {
-    model: "deepseek/deepseek-chat",
-    label: "DeepSeek V3 (Science & Calculations)",
-    why: "Next-generation 671B MoE model for scientific and analytical tasks",
+    model: MODELS.reasoning,
+    label: "Claude Opus 5.5 (Math & Science)",
+    why: "High-capability model for complex mathematical and scientific reasoning.",
   },
-
-  // 26. Enterprise strategy, financial reports, contract analysis
   finance_business: {
-    model: "openai/gpt-5.4-mini",
-    label: "GPT-5.4 Mini (Business & Finance)",
-    why: "Optimized for enterprise documents, financial summaries, and business intelligence",
+    model: MODELS.general,
+    label: "GPT-6.1 Terra (Business)",
+    why: "Cost-efficient model for business documents and analysis.",
   },
-
-  // 27. Universal default intelligent orchestrator
   default: {
-    model: "openai/gpt-5.4-mini",
-    label: "GPT-5.4 Mini (Default Master)",
-    why: "The premier frontier generalist model for comprehensive task orchestration",
+    model: MODELS.general,
+    label: "GPT-6.1 Terra (Default)",
+    why: "Balanced general model selected for cost and capability.",
   },
 };
 

@@ -1,13 +1,14 @@
 const fs = require("fs");
 const path = require("path");
 const { callOpenRouter } = require("../openrouterClient");
+const { MODEL_REGISTRY } = require("../modelRegistry");
 
 const DATA_DIR = path.join(__dirname, "..", "..", "data");
 const SESSIONS_DIR = path.join(DATA_DIR, "sessions");
 const ROOT_BRAIN_MD_PATH = path.join(__dirname, "..", "..", "brain.md");
 
 const RECENT_MESSAGE_LIMIT = 20; // keep this many raw messages before folding into summary
-const SUMMARY_MODEL = "openai/gpt-4o-mini"; // cheap/fast — this is an internal bookkeeping call, not a user-facing answer
+const SUMMARY_MODEL = MODEL_REGISTRY.fast_general.model;
 const DEFAULT_SESSION = "cli"; // used by loop.js when run standalone outside any HTTP session
 
 // Guards against a malicious/bad sessionId (e.g. from a forged cookie) being

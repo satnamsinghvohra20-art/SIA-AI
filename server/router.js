@@ -15,14 +15,22 @@ const siaIdentity = require("./siaIdentity");
  *      WhatsApp": previously nothing told the model Sia has that ability)
  *   4. return the answer + which model/category was used (for transparency)
  */
-const { getModelByIdSync, matchBestModelFrom300 } = require("./modelsCatalog");
+const { getModelByIdSync } = require("./modelsCatalog");
+
+function getModelForCategory(category) {
+  const categoryName = MODEL_REGISTRY[category] ? category : "default";
+  return {
+    category: categoryName,
+    ...MODEL_REGISTRY[categoryName],
+  };
+}
 
 async function route({ message, history = [], forceCategory = null, forceModel = null }) {
   let targetModel = null;
   let modelLabel = null;
   let categoryName = "general";
-  let classifiedBy = "300_model_matcher";
-  let why = "Auto-selected #1 AI model among 300+ models";
+  let classifiedBy = "task_classifier";
+  let why = "Selected a model using the task classifier's specialist mapping.";
 
   if (forceModel) {
     targetModel = forceModel;
@@ -39,23 +47,13 @@ async function route({ message, history = [], forceCategory = null, forceModel =
     classifiedBy = "category_override";
     why = entry.why;
   } else {
-    // 300+ AI Models Intelligent Matcher
     const classification = await classify(message);
-    if (classification.category === "device_control") {
-      const entry = MODEL_REGISTRY.device_control;
-      targetModel = entry.model;
-      modelLabel = entry.label;
-      categoryName = "device_control";
-      classifiedBy = classification.method;
-      why = entry.why;
-    } else {
-      const bestMatch = matchBestModelFrom300(message);
-      targetModel = bestMatch.model;
-      modelLabel = bestMatch.modelLabel;
-      categoryName = bestMatch.category;
-      classifiedBy = "300_model_matcher";
-      why = bestMatch.why;
-    }
+    const entry = getModelForCategory(classification.category);
+    targetModel = entry.model;
+    modelLabel = entry.label;
+    categoryName = entry.category;
+    classifiedBy = classification.method;
+    why = entry.why;
   }
 
   const messages = [
@@ -81,4 +79,4 @@ async function route({ message, history = [], forceCategory = null, forceModel =
   };
 }
 
-module.exports = { route };
+module.exports = { route, getModelForCategory };

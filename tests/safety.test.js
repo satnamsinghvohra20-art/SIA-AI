@@ -4,6 +4,55 @@ const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
 
+test("offline fallback does not fabricate answers for unsupported tasks", async () => {
+  const modulePath = require.resolve("../server/localBrain");
+  const originalModule = require.cache[modulePath];
+  const originalHost = process.env.OLLAMA_HOST;
+  const originalPort = process.env.OLLAMA_PORT;
+  delete require.cache[modulePath];
+  process.env.OLLAMA_HOST = "127.0.0.1";
+  process.env.OLLAMA_PORT = "1";
+
+  try {
+    const localBrain = require(modulePath);
+    assert.equal(localBrain.solveSovereignHeuristic("write a Python web server"), null);
+    assert.match(
+      localBrain.solveSovereignHeuristic("what can you do"),
+      /Offline fallback supports basic arithmetic/
+    );
+    await assert.rejects(
+      localBrain.generateLocalFallback({ message: "write a Python web server" }),
+      /cannot be completed in offline fallback mode/
+    );
+  } finally {
+    delete require.cache[modulePath];
+    if (originalModule) require.cache[modulePath] = originalModule;
+    if (originalHost === undefined) delete process.env.OLLAMA_HOST;
+    else process.env.OLLAMA_HOST = originalHost;
+    if (originalPort === undefined) delete process.env.OLLAMA_PORT;
+    else process.env.OLLAMA_PORT = originalPort;
+  }
+});
+
+test("classified tasks use their current specialist model instead of catalog order", () => {
+  const { getModelForCategory } = require("../server/router");
+  assert.equal(getModelForCategory("coding_python").model, "anthropic/claude-sonnet-5.5");
+  assert.equal(getModelForCategory("vision").model, "google/gemini-4-carbon");
+  assert.equal(getModelForCategory("unknown").model, "openai/gpt-6.1-terra");
+});
+
+test("consensus mode queries three distinct current specialist models", () => {
+  const { COUNCIL_MODELS } = require("../server/consensusEngine");
+  const { MODEL_REGISTRY } = require("../server/modelRegistry");
+  const modelIds = COUNCIL_MODELS.map((model) => model.id);
+  assert.equal(new Set(modelIds).size, 3);
+  assert.deepEqual(modelIds, [
+    MODEL_REGISTRY.coding.model,
+    MODEL_REGISTRY.vision.model,
+    MODEL_REGISTRY.fast_reasoning.model,
+  ]);
+});
+
 test("semantic cache never returns another session's answer", () => {
   const { SemanticCache } = require("../server/semanticCache");
   const cache = new SemanticCache();

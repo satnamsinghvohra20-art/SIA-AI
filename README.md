@@ -29,7 +29,7 @@ openrouterClient.js ──► sends the request to that model via OpenRouter
 your answer, tagged with which model handled it, persisted to brainStore
 ```
 
-**Why OpenRouter?** It's a single API that proxies 100+ models — OpenAI,
+**Why OpenRouter?** It's a single API that proxies hundreds of models — OpenAI,
 Anthropic, Google, Meta, DeepSeek, Mistral, Qwen, xAI, and more — so you get
 one key instead of juggling a dozen provider accounts. Swap any model in
 `server/modelRegistry.js` any time a better one comes out.
@@ -118,8 +118,11 @@ limited tighter (10 attempts / 15 min) against brute-forcing the password.
 ## Customizing the routing
 
 Everything about "who does what" lives in `server/modelRegistry.js`. To change
-which model handles a category, just change the `model` string — it must be a
-valid OpenRouter model id (browse them at https://openrouter.ai/models).
+which model handles a category, change its `model` string to an available
+OpenRouter model id (browse them at https://openrouter.ai/models). Automatic
+routing uses the task classifier's category and this registry; the model
+catalog in the UI is refreshed from OpenRouter so retired models are not
+offered when the live catalog is available.
 
 To add a whole new category (e.g. "translation" or "legal"):
 1. Add an entry to `MODEL_REGISTRY` in `modelRegistry.js`
@@ -131,13 +134,18 @@ The dropdown next to the input box lets you force a specific category instead
 of trusting auto-routing — useful for testing or when you know exactly which
 model you want.
 
+**Council mode** asks Claude Sonnet 5.5, Gemini 4 Carbon, and DeepSeek V4.1
+Flash for independent perspectives in parallel, then uses the default model
+to synthesize them. This combines answers at the orchestration layer; it does
+not merge or copy model weights.
+
 ## Next steps you might want to add
 
 - **More launch hardening** — request timeouts, model fallback, spend limits,
   and structured cost/latency tracking
 - **Cost tracking** — OpenRouter returns token usage per call; log it per category
-- **Multi-model consensus mode** — send the same prompt to 2-3 models and compare answers
-- **File/image upload** for the vision category
+- **Model evaluation** — compare candidate models on representative tasks;
+  OpenRouter usage rankings measure adoption, not per-task accuracy
 - **Real user accounts** — current auth is one shared password, not per-person logins; fine for a small team, not for public signup
 - See `FEATURES.md` for a fuller prioritized backlog
 

@@ -1,6 +1,5 @@
 /**
- * Sovereign Local Cognitive Engine & Ollama Fallback Bridge for Sia AI
- * Guarantees 100% operational uptime offline or when cloud API credits are exhausted ($0 cost).
+ * Local Ollama bridge with a small deterministic fallback for supported tasks.
  */
 
 const http = require("http");
@@ -36,7 +35,7 @@ async function callOllama({ prompt, system, model = "llama3.2:1b" }) {
     const postData = JSON.stringify({
       model,
       prompt,
-      system: system || "You are Sia, an omnipotent, lightning-fast sovereign AI co-pilot.",
+      system: system || "You are Sia. Be accurate, and say when you cannot complete a request.",
       stream: false,
     });
 
@@ -77,8 +76,7 @@ async function callOllama({ prompt, system, model = "llama3.2:1b" }) {
 }
 
 /**
- * Sovereign Heuristic Reasoner (Zero external dependencies)
- * Handles mathematics, unit conversions, coding templates, identity, and system analysis offline.
+ * Small deterministic fallback for tasks that can be answered from local state.
  */
 function solveSovereignHeuristic(message) {
   const text = message.trim();
@@ -99,13 +97,13 @@ function solveSovereignHeuristic(message) {
     }
   }
 
-  // 2. Identity & Architecture
+  // 2. Identity
   if (lower.includes("who are you") || lower.includes("what is your name") || lower.includes("introduce yourself")) {
-    return "I am **Sia**, your sovereign autonomous AI co-pilot and hyper-speed device controller. Operating with supreme execution velocity, zero-hallucination protocols, and full host automation.";
+    return "I am Sia. In offline fallback mode, I can answer basic arithmetic and local date/time questions; cloud AI and device-control tasks may be unavailable.";
   }
 
   if (lower.includes("what can you do") || lower.includes("your capabilities") || lower.includes("help me")) {
-    return "I execute direct device controls, send WhatsApp/messages without drafts, launch apps and websites with 0ms delay, stream frontier intelligence, perform system telemetry, and automate multi-step tasks across your entire machine.";
+    return "Offline fallback supports basic arithmetic and local date/time questions. Other requests need a connected AI model, and device actions require the device-control service.";
   }
 
   // 3. Time, Date, and System
@@ -117,13 +115,7 @@ function solveSovereignHeuristic(message) {
     return `Today's date is **${new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}**.`;
   }
 
-  // 4. Code & Dev Generation Patterns
-  if (lower.startsWith("write a function") || lower.startsWith("create a script") || lower.includes("in python") || lower.includes("in javascript")) {
-    return `Here is a clean, production-ready implementation tailored to your request:\n\n\`\`\`javascript\n// Optimized Autonomous Implementation\nfunction executeTask(input) {\n  console.log("Executing task:", input);\n  return { ok: true, timestamp: Date.now() };\n}\nmodule.exports = { executeTask };\n\`\`\`\n\nVerified and ready for immediate deployment.`;
-  }
-
-  // 5. Default Deterministic Sovereign Fallback
-  return `Instruction acknowledged: "${text}". Operating under Sovereign Offline Protocol. All core device, system, and calculation capabilities are fully active and available.`;
+  return null;
 }
 
 /**
@@ -147,19 +139,25 @@ async function generateLocalFallback({ message, history = [] }) {
         };
       }
     } catch (err) {
-      console.warn("[LocalBrain] Ollama query failed, failing over to Sovereign Heuristic Reasoner:", err.message);
+      console.warn("[LocalBrain] Ollama query failed; checking deterministic offline support:", err.message);
     }
   }
 
-  // Pure in-memory deterministic heuristic engine
+  // Use deterministic answers only for tasks this fallback can actually handle.
   const answer = solveSovereignHeuristic(message);
+  if (answer === null) {
+    throw new Error(
+      "Cloud AI models are unavailable and no local Ollama model is responding. This request cannot be completed in offline fallback mode."
+    );
+  }
+
   return {
     answer,
     routing: {
       category: "offline_sovereign",
       model: "sovereign-heuristic",
-      modelLabel: "🧠 Sovereign Cognitive Engine ($0 Cost)",
-      why: "Deterministic sovereign intelligence executed locally on host runtime.",
+      modelLabel: "Offline deterministic fallback",
+      why: "Answered locally using a limited set of deterministic capabilities.",
     },
   };
 }

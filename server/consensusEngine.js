@@ -1,13 +1,14 @@
 const { callOpenRouter } = require("./openrouterClient");
+const { MODEL_REGISTRY } = require("./modelRegistry");
 const siaIdentity = require("./siaIdentity");
 
 const COUNCIL_MODELS = [
-  { id: "openai/gpt-4o-mini", label: "GPT-4o Mini", specialty: "Omni Knowledge & Pragmatism" },
-  { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", specialty: "Speed, Logic & Code Context" },
-  { id: "deepseek/deepseek-chat", label: "DeepSeek V3", specialty: "First-Principles Reasoning & STEM" },
+  { id: MODEL_REGISTRY.coding.model, label: MODEL_REGISTRY.coding.label, specialty: "Coding and implementation" },
+  { id: MODEL_REGISTRY.vision.model, label: MODEL_REGISTRY.vision.label, specialty: "Multimodal analysis" },
+  { id: MODEL_REGISTRY.fast_reasoning.model, label: MODEL_REGISTRY.fast_reasoning.label, specialty: "Fast reasoning" },
 ];
 
-const SYNTHESIS_MODEL = "openai/gpt-4o-mini";
+const SYNTHESIS_MODEL = MODEL_REGISTRY.default.model;
 
 /**
  * Runs multi-model consensus deliberation.

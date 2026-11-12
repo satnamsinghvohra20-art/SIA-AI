@@ -30,6 +30,19 @@ const PROVIDER_ICONS = {
   other: "🤖",
 };
 
+const VERIFIED_MODEL_SEEDS = [
+  { id: "deepseek/deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", provider: "deepseek", category: "fast", context: "1M", featured: true },
+  { id: "openai/gpt-6.1-terra", name: "GPT-6.1 Terra", provider: "openai", category: "general", context: "1M", featured: true },
+  { id: "openai/gpt-6.1-sol", name: "GPT-6.1 Sol", provider: "openai", category: "general", context: "1M" },
+  { id: "anthropic/claude-sonnet-5.5", name: "Claude Sonnet 5.5", provider: "anthropic", category: "coding", context: "1M", featured: true },
+  { id: "anthropic/claude-opus-5.5", name: "Claude Opus 5.5", provider: "anthropic", category: "reasoning", context: "1M", featured: true },
+  { id: "anthropic/claude-fable-5.2", name: "Claude Fable 5.2", provider: "anthropic", category: "reasoning", context: "1M", featured: true },
+  { id: "google/gemini-4-carbon", name: "Gemini 4 Carbon", provider: "google", category: "vision", context: "1M", featured: true },
+  { id: "perplexity/sonar", name: "Perplexity Sonar", provider: "perplexity", category: "research", context: "127k", featured: true },
+  { id: "moonshotai/kimi-k3.1-pro", name: "Kimi K3.1 Pro", provider: "other", category: "open_source", context: "1M" },
+  { id: "qwen/qwen3.8-flash", name: "Qwen 3.8 Flash", provider: "qwen", category: "multilingual", context: "1M" },
+];
+
 // Curated comprehensive directory of 300+ AI models on OpenRouter
 const CURATED_MODELS = [
   // --- ANTHROPIC CLAUDE (Premier Hybrid Reasoning & Architecture) ---
@@ -276,36 +289,37 @@ async function getAllModels() {
     return dynamicModelsCache;
   }
 
-  // Base list initialized from curated models
+  // Use only currently listed chat models when the live catalog is available.
   const modelMap = new Map();
-  for (const m of CURATED_MODELS) {
-    modelMap.set(m.id, {
-      ...m,
-      icon: PROVIDER_ICONS[m.provider] || "🤖",
-    });
-  }
-
-  // Try fetching live list from OpenRouter
   const liveList = await fetchOpenRouterModels();
-  if (liveList && Array.isArray(liveList)) {
-    for (const item of liveList) {
-      if (!item?.id) continue;
-      const existing = modelMap.get(item.id);
-      const provider = existing?.provider || inferProvider(item.id);
-      const category = existing?.category || inferCategory(item.id, item.name || "");
-      const ctx = item.context_length ? `${Math.round(item.context_length / 1000)}k` : (existing?.context || "128k");
-
-      modelMap.set(item.id, {
-        id: item.id,
-        name: existing?.name || item.name || item.id,
-        provider,
-        category,
-        context: ctx,
-        description: item.description || existing?.why || "",
-        featured: existing ? existing.featured : false,
-        icon: PROVIDER_ICONS[provider] || "🤖",
-      });
+  const sourceModels = liveList || VERIFIED_MODEL_SEEDS;
+  for (const item of sourceModels) {
+    if (!item?.id) continue;
+    if (
+      liveList &&
+      item.architecture?.output_modalities &&
+      !item.architecture.output_modalities.includes("text")
+    ) {
+      continue;
     }
+
+    const existing = CURATED_MODELS.find((model) => model.id === item.id);
+    const provider = existing?.provider || inferProvider(item.id);
+    const category = existing?.category || inferCategory(item.id, item.name || "");
+    const ctx = item.context_length
+      ? `${Math.round(item.context_length / 1000)}k`
+      : (item.context || existing?.context || "128k");
+
+    modelMap.set(item.id, {
+      id: item.id,
+      name: item.name || existing?.name || item.id,
+      provider,
+      category,
+      context: ctx,
+      description: item.description || existing?.why || "",
+      featured: existing?.featured || false,
+      icon: PROVIDER_ICONS[provider] || "🤖",
+    });
   }
 
   dynamicModelsCache = Array.from(modelMap.values());
@@ -314,13 +328,11 @@ async function getAllModels() {
 }
 
 /**
- * Intelligent 300+ Model Evaluation & Match Engine
- * Compares user task requirements against all 300+ models in the catalog
- * and automatically returns the #1 highest-ranked model for the job.
+ * Selects a task-relevant model from the available catalog.
  */
 function matchBestModelFrom300(query) {
   const q = String(query || "").toLowerCase().trim();
-  const models = dynamicModelsCache || CURATED_MODELS;
+  const models = dynamicModelsCache || VERIFIED_MODEL_SEEDS;
 
   // 1. Feature Detection
   const hasCodeKeywords = /\b(function|def|const|class|import|return|git|sql|async|await|bug|refactor|compile|regex|algorithm|typescript|javascript|python|rust|c\+\+|java|html|css|php|ruby|swift|golang|api|endpoint|database)\b/i.test(q);
@@ -413,7 +425,7 @@ function matchBestModelFrom300(query) {
   });
 
   scored.sort((a, b) => b.score - a.score);
-  const best = scored[0] || CURATED_MODELS[0];
+  const best = scored[0] || VERIFIED_MODEL_SEEDS[0];
 
   return {
     model: best.id,
@@ -422,17 +434,16 @@ function matchBestModelFrom300(query) {
     score: best.score,
     provider: best.provider,
     icon: best.icon || PROVIDER_ICONS[best.provider] || "🤖",
-    why: `Auto-selected #1 model among 300+ AI models for optimal ${best.category} performance.`,
+    why: `Selected the highest-scoring available model for ${best.category}.`,
     topMatches: scored.slice(0, 5).map((s) => ({ id: s.id, name: s.name, score: s.score })),
   };
 }
 
 function getModelByIdSync(id) {
   if (dynamicModelsCache) {
-    const found = dynamicModelsCache.find((m) => m.id === id);
-    if (found) return found;
+    return dynamicModelsCache.find((m) => m.id === id) || null;
   }
-  return CURATED_MODELS.find((m) => m.id === id) || null;
+  return VERIFIED_MODEL_SEEDS.find((m) => m.id === id) || null;
 }
 
 module.exports = {

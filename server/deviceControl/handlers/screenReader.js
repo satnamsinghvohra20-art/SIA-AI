@@ -3,6 +3,7 @@ const path = require("path");
 const { execFile } = require("child_process");
 const system = require("./system");
 const { callOpenRouter } = require("../../openrouterClient");
+const { MODEL_REGISTRY } = require("../../modelRegistry");
 
 function getActiveWindowSummary() {
   if (process.platform !== "win32") return Promise.resolve("");
@@ -24,9 +25,8 @@ function getActiveWindowSummary() {
 /**
  * SCREEN & MESSAGE READER
  * -----------------------
- * Captures screen/window state and uses multimodal vision intelligence
- * (openai/gpt-4o-mini) to extract and read visible messages, sender names,
- * notifications, and screen contents with 100% precision.
+ * Captures screen/window state and uses a vision model to extract visible
+ * messages, sender names, notifications, and screen contents.
  */
 
 async function readScreenMessages({ targetApp = "whatsapp", question = "Read recent messages" } = {}) {
@@ -72,7 +72,7 @@ Instructions:
 4. Keep your answer direct, structured, and easy to speak out loud in 2-4 sentences.`;
 
   const extractedText = await callOpenRouter({
-    model: "openai/gpt-4o",
+    model: MODEL_REGISTRY.vision.model,
     messages: [
       {
         role: "user",
@@ -116,7 +116,7 @@ Instructions:
 3. Summarize the contents clearly and concisely in 2-3 sentences.`;
 
   const analysis = await callOpenRouter({
-    model: "openai/gpt-4o",
+    model: MODEL_REGISTRY.vision.model,
     messages: [
       {
         role: "user",

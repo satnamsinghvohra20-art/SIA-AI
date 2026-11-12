@@ -232,8 +232,9 @@ async function llmClassify(text) {
   )}. Reply with ONLY the category name and nothing else.`;
 
   try {
+    const fastModel = require("./modelRegistry").MODEL_REGISTRY.fast_general.model;
     const result = await callOpenRouter({
-      model: "openai/gpt-4o-mini",
+      model: fastModel,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: text },

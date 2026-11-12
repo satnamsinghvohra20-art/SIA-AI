@@ -1,24 +1,18 @@
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 const FALLBACK_MODELS = [
-  "openai/gpt-4o-mini",
-  "google/gemini-2.5-flash",
-  "deepseek/deepseek-chat",
-  "openai/gpt-5.4-mini",
-  "anthropic/claude-sonnet-5",
-  "anthropic/claude-haiku-4.5",
-  "meta-llama/llama-3.3-70b-instruct",
-  "openrouter/free",
-  "nvidia/nemotron-3-super-120b-a12b:free",
+  "deepseek/deepseek-v4.1-flash",
+  "openai/gpt-6.1-terra",
+  "anthropic/claude-sonnet-5.5",
+  "google/gemini-4-carbon",
+  "openai/gpt-6.1-sol",
 ];
 
 const FALLBACK_TOOL_MODELS = [
-  "openai/gpt-4o-mini",
-  "openai/gpt-5.4-mini",
-  "google/gemini-2.5-flash",
-  "anthropic/claude-sonnet-5",
-  "anthropic/claude-haiku-4.5",
-  "openrouter/free",
+  "deepseek/deepseek-v4.1-flash",
+  "openai/gpt-6.1-terra",
+  "anthropic/claude-sonnet-5.5",
+  "google/gemini-4-carbon",
 ];
 
 const DEFAULT_MAX_TOKENS = 500;
