@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: sia-ai
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: node server/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: ANDROID_PAIR_TOKEN
+        generateValue: true
+      - key: SIA_PASSWORD
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false

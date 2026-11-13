@@ -94,6 +94,7 @@ class AmbientSentinel {
         isCharging: this.latestTelemetry.isCharging,
         uptimeHours,
         alert,
+        audit: this.auditSystemHealth(),
         timestamp: Date.now(),
       };
 
@@ -113,6 +114,41 @@ class AmbientSentinel {
         );
       }
     } catch (_) {}
+  }
+
+  auditSystemHealth() {
+    const findings = [];
+    try {
+      const { getModelHealthReport } = require("./openrouterClient");
+      const { semanticCache } = require("./semanticCache");
+      const health = getModelHealthReport();
+      const cacheStats = semanticCache.getStats();
+
+      if (health.quarantined.length > 0) {
+        findings.push({
+          severity: "medium",
+          area: "model_routing",
+          detail: `${health.quarantined.length} model(s) temporarily quarantined with automatic failover active.`,
+        });
+      }
+      if (health.summary?.errorRatePct > 25 && health.summary?.totalCalls >= 4) {
+        findings.push({
+          severity: "high",
+          area: "provider_reliability",
+          detail: `Elevated model error rate: ${health.summary.errorRatePct}% across ${health.summary.totalCalls} calls.`,
+        });
+      }
+      return {
+        tier: health.tier,
+        completionRatePct: health.summary?.completionRatePct ?? 100,
+        quarantinedCount: health.quarantined.length,
+        cacheHitRate: cacheStats.hitRate,
+        findings,
+        checkedAt: new Date().toISOString(),
+      };
+    } catch (_) {
+      return { findings: [], checkedAt: new Date().toISOString() };
+    }
   }
 
   getHealthReport() {

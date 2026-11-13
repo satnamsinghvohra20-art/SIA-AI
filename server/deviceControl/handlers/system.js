@@ -186,11 +186,11 @@ function launchDetached(cmd, args = []) {
       const child = spawn(cmd, args, {
         detached: true,
         stdio: "ignore",
-        windowsHide: false,
-        shell: PLATFORM === "win32",
+        windowsHide: true,
+        shell: false,
       });
       child.unref();
-      setTimeout(resolve, 150);
+      setTimeout(resolve, 100);
     } catch (_) {
       resolve();
     }
@@ -479,7 +479,7 @@ if ($p) {
   [WinTop]::SetForegroundWindow($p.MainWindowHandle)
 }
 `;
-      await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", psLaunch]).catch(() => {});
+      await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", psLaunch]).catch(() => { });
     }
 
     const waUrl = explicitQuery ? `https://web.whatsapp.com/send?text=${encodeURIComponent(explicitQuery)}` : "https://web.whatsapp.com";
@@ -543,7 +543,7 @@ if ($p) {
         `Start-Process "${name}"`,
       ]);
       return { opened: app, mode: "system_start" };
-    } catch (_) {}
+    } catch (_) { }
   }
 
   const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(explicitQuery || app)}`;
@@ -559,7 +559,7 @@ async function closeApp({ app }) {
       // taskkill exits non-zero if the process wasn't running — not fatal
     });
   } else {
-    await run("pkill", ["-if", target]).catch(() => {});
+    await run("pkill", ["-if", target]).catch(() => { });
   }
   return { closed: app };
 }
@@ -656,9 +656,9 @@ try {
   $bmp.Save('${psPath}', [System.Drawing.Imaging.ImageFormat]::Png)
   $bmp.Dispose()
 }`;
-    await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]).catch(() => {});
+    await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]).catch(() => { });
   } else {
-    await run("import", ["-window", "root", file]).catch(() => {});
+    await run("import", ["-window", "root", file]).catch(() => { });
   }
   return { screenshot: file };
 }
@@ -695,15 +695,15 @@ public class MediaKey {
 [MediaKey]::keybd_event(${vkCode}, 0, 0, 0);
 [MediaKey]::keybd_event(${vkCode}, 0, 2, 0);
 `;
-    await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script.replace(/\r?\n/g, " ")]).catch(() => {});
+    await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script.replace(/\r?\n/g, " ")]).catch(() => { });
     return { success: true, action: act, key: vkCode };
   } else if (PLATFORM === "darwin") {
     const cmd = act === "next" ? "next track" : (act === "previous" || act === "prev" ? "previous track" : "playpause");
-    await run("osascript", ["-e", `tell application "Spotify" to ${cmd}`]).catch(() => {});
+    await run("osascript", ["-e", `tell application "Spotify" to ${cmd}`]).catch(() => { });
     return { success: true, action: act };
   } else {
     const cmd = act === "next" ? "next" : (act === "previous" || act === "prev" ? "previous" : "play-pause");
-    await run("playerctl", [cmd]).catch(() => {});
+    await run("playerctl", [cmd]).catch(() => { });
     return { success: true, action: act };
   }
 }
@@ -713,7 +713,7 @@ async function windowControl({ action = "minimize", title = null } = {}) {
   if (PLATFORM === "win32") {
     if (act === "show_desktop" || act === "minimize_all") {
       const script = `(New-Object -ComObject Shell.Application).MinimizeAll()`;
-      await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]).catch(() => {});
+      await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]).catch(() => { });
       return { success: true, action: "show_desktop" };
     }
 
@@ -743,11 +743,11 @@ if ($hwnd -ne [IntPtr]::Zero) {
 }
 `}
 `;
-    await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script.replace(/\r?\n/g, " ")]).catch(() => {});
+    await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script.replace(/\r?\n/g, " ")]).catch(() => { });
     return { success: true, action: act, target: title || "active_window" };
   } else if (PLATFORM === "darwin") {
     if (act === "minimize" || act === "show_desktop") {
-      await run("osascript", ["-e", `tell application "System Events" to set visible of every process whose visible is true to false`]).catch(() => {});
+      await run("osascript", ["-e", `tell application "System Events" to set visible of every process whose visible is true to false`]).catch(() => { });
     }
     return { success: true, action: act };
   }
@@ -795,7 +795,7 @@ async function clipboardControl({ action = "get", text = "" } = {}) {
       const out = await run("pbpaste").catch(() => "");
       return { success: true, action: "get", text: out.trim() };
     } else {
-      await run("pbcopy", [], { input: text }).catch(() => {});
+      await run("pbcopy", [], { input: text }).catch(() => { });
       return { success: true, action: "set", text };
     }
   }
@@ -822,13 +822,13 @@ try {
 async function lockWorkstation() {
   if (PLATFORM === "win32") {
     const script = `Add-Type -TypeDefinition 'using System.Runtime.InteropServices; public class Lock { [DllImport("user32.dll")] public static extern bool LockWorkStation(); }'; [Lock]::LockWorkStation();`;
-    await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script.replace(/\r?\n/g, " ")]).catch(() => {});
+    await run("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script.replace(/\r?\n/g, " ")]).catch(() => { });
     return { success: true, locked: true };
   } else if (PLATFORM === "darwin") {
-    await run("pmset", ["displaysleepnow"]).catch(() => {});
+    await run("pmset", ["displaysleepnow"]).catch(() => { });
     return { success: true, locked: true };
   } else {
-    await run("loginctl", ["lock-session"]).catch(() => {});
+    await run("loginctl", ["lock-session"]).catch(() => { });
     return { success: true, locked: true };
   }
 }

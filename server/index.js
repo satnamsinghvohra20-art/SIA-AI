@@ -689,19 +689,24 @@ app.post("/api/device/command", deviceLimiter, async (req, res) => {
     const fastResult = await tryFastDispatch(instruction);
     if (fastResult && fastResult.matched) {
       console.log(`[DeviceCommand] Fast dispatch hit for: "${instruction}" (<50ms)`);
-      const steps = (fastResult.steps || []).map((s) => ({
-        type: "action",
-        action: s.action,
-        params: s.params,
-        result: { ok: true, ...(typeof s.result === "object" ? s.result : { value: s.result }) },
-      }));
+      const steps = (fastResult.steps || []).map((s) => {
+        const rawRes = typeof s.result === "object" && s.result !== null ? s.result : { value: s.result };
+        const stepOk = rawRes.ok !== false && rawRes.success !== false && !rawRes.error;
+        return {
+          type: "action",
+          action: s.action,
+          params: s.params,
+          result: { ...rawRes, ok: stepOk },
+        };
+      });
+      const overallOk = fastResult.ok !== false && steps.every((s) => s.result.ok);
       const snapshot = {
         taskId: `fast_${Date.now()}`,
-        status: "done",
-        finalAnswer: fastResult.answer || "Command executed successfully, sir.",
+        status: overallOk ? "done" : "error",
+        finalAnswer: fastResult.answer || (overallOk ? "Command executed successfully, sir." : "Command encountered an error."),
         log: [
           ...steps,
-          { type: "final", content: fastResult.answer || "Command executed successfully, sir." },
+          { type: overallOk ? "final" : "error", content: fastResult.answer || "Command executed." },
         ],
         pendingConfirmation: null,
       };
@@ -711,21 +716,25 @@ app.post("/api/device/command", deviceLimiter, async (req, res) => {
     // 2. Autonomous Multi-Action Goal Planner (Auto-DAG)
     if (goalPlanner && goalPlanner.isCompoundGoal(instruction)) {
       console.log(`[DeviceCommand] Compound goal detected: "${instruction}". Executing Auto-DAG...`);
-      const plan = await goalPlanner.decomposeIntoDAG(instruction);
-      const planResult = await goalPlanner.executePlan(plan, { sessionId: req.sessionId });
-      const steps = (planResult.executedNodes || []).map((n) => ({
-        type: "action",
-        action: n.action,
-        params: n.params,
-        result: { ok: true, ...(typeof n.result === "object" ? n.result : { value: n.result }) },
-      }));
+      const plan = goalPlanner.decompose(instruction);
+      const planResult = await goalPlanner.executeDAG(plan, { sessionId: req.sessionId });
+      const steps = (planResult.executedNodes || []).map((n) => {
+        const rawRes = typeof n.result === "object" && n.result !== null ? n.result : { value: n.result };
+        const stepOk = rawRes.ok !== false && !rawRes.error;
+        return {
+          type: "action",
+          action: n.action,
+          params: n.params,
+          result: { ...rawRes, ok: stepOk },
+        };
+      });
       const snapshot = {
-        taskId: `dag_${plan.id}`,
-        status: "done",
-        finalAnswer: planResult.summary || "Autonomous DAG workflow completed successfully, sir.",
+        taskId: plan.id || `dag_${Date.now()}`,
+        status: planResult.completed ? "done" : "error",
+        finalAnswer: planResult.summary,
         log: [
           ...steps,
-          { type: "final", content: planResult.summary || "Autonomous DAG workflow completed successfully, sir." },
+          { type: planResult.completed ? "final" : "error", content: planResult.summary },
         ],
         pendingConfirmation: null,
       };
@@ -845,9 +854,19 @@ app.get("/api/cache/stats", (req, res) => {
   res.json({ ok: true, stats: semanticCache.getStats() });
 });
 
+app.get("/api/agent/metrics", (req, res) => {
+  res.json({
+    ok: true,
+    modelsHealth: getModelHealthReport(),
+    cache: semanticCache.getStats(),
+    sentinel: ambientSentinel.getHealthReport(),
+  });
+});
+
 const PORT = process.env.PORT || 3000;
-const httpServer = app.listen(PORT, () => {
-  console.log(`Sia orchestrator running at http://localhost:${PORT}`);
+const HOST = process.env.HOST || "0.0.0.0";
+const httpServer = app.listen(PORT, HOST, () => {
+  console.log(`Sia orchestrator running at http://${HOST === "0.0.0.0" ? "localhost" : HOST}:${PORT}`);
   ambientSentinel.start();
   // Warm up account tier & live OpenRouter catalog in background so first request has 0ms cold-start
   refreshAccountTier().then(() => getAllModels()).catch(() => {});

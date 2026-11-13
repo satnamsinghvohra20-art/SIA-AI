@@ -107,3 +107,62 @@ test("agent loop reports its iteration limit instead of claiming success", async
   assert.equal(result.status, "error");
   assert.match(result.finalAnswer, /Stopped after 1 steps/);
 });
+
+test("goal planner never fakes completion when a sub-step fails", async () => {
+  const { GoalPlanner } = require("../server/goalPlanner");
+  const agentLoopPath = require.resolve("../server/deviceControl/agentLoop");
+  const originalStartTask = require(agentLoopPath).startTask;
+  require(agentLoopPath).startTask = async ({ instruction }) => ({
+    status: "error",
+    finalAnswer: `Blocked: ${instruction}`,
+    log: [{ type: "error", content: "simulated failure" }],
+  });
+  try {
+    const planner = new GoalPlanner();
+    const dag = planner.decompose("check disk health and verify backup log");
+    const report = await planner.executeDAG(dag, { sessionId: "test-session" });
+    assert.equal(report.completed, false);
+    assert.equal(report.steps[0].status, "failed");
+  } finally {
+    require(agentLoopPath).startTask = originalStartTask;
+  }
+});
+
+test("knowledge graph rejects invalid session ids and stores verified fixes", () => {
+  const kg = require("../server/memory/knowledgeGraph");
+  assert.throws(() => kg.readKnowledge("../escape"), /Invalid sessionId/);
+  const updated = kg.addVerifiedFix("unit_test_fix_session", "402 cascade", "Auto-detect free tier", "unit_test");
+  assert.ok(updated.verified_fixes.some((f) => f.issue === "402 cascade" && f.resolution === "Auto-detect free tier"));
+});
+
+test("universal fast dispatcher executes file, shell, and compound tasks directly", async () => {
+  const { tryFastDispatch } = require("../server/fastDispatcher");
+  const { classify } = require("../server/classifier");
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "sia-fast-tasks-"));
+  const targetFile = path.join(tempDir, "hello.txt");
+  try {
+    assert.equal((await classify(`create file ${targetFile} with hello world`)).category, "device_control");
+    assert.equal((await classify("run command node -v")).category, "device_control");
+    assert.equal((await classify("check git status")).category, "device_control");
+
+    const created = await tryFastDispatch(`create file ${targetFile} with hello world`);
+    assert.equal(created.matched, true);
+    assert.equal(created.ok, true);
+
+    const read = await tryFastDispatch(`read file ${targetFile}`);
+    assert.equal(read.matched, true);
+    assert.equal(read.ok, true);
+    assert.match(read.answer, /hello world/);
+
+    const cmd = await tryFastDispatch("run command node -v");
+    assert.equal(cmd.matched, true);
+    assert.equal(cmd.ok, true);
+    assert.match(cmd.answer, /v\d+/);
+
+    const del = await tryFastDispatch(`delete file ${targetFile}`);
+    assert.equal(del.matched, true);
+    assert.equal(del.ok, true);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});

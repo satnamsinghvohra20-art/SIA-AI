@@ -169,7 +169,7 @@ function loadHistory() {
         }
       }
     })
-    .catch(() => {});
+    .catch(() => { });
 }
 
 const CATEGORY_ICONS = {
@@ -223,7 +223,7 @@ function loadModels() {
       // Populate overrideSelect with categories + all 300+ models
       if (overrideSelect) {
         overrideSelect.innerHTML = `<option value="">🤖 Auto-Route (Intelligent)</option>`;
-        
+
         const catGroup = document.createElement("optgroup");
         catGroup.label = "⚡ Specialized Superpowers (Auto)";
         Object.entries(allCategoriesMap).forEach(([category, entry]) => {
@@ -281,7 +281,7 @@ function loadModels() {
 
       renderModelCards();
     })
-    .catch(() => {});
+    .catch(() => { });
 }
 
 function renderModelCards() {
@@ -289,7 +289,7 @@ function renderModelCards() {
   modelsGrid.innerHTML = "";
 
   const query = (modelsSearchInput ? modelsSearchInput.value : "").trim().toLowerCase();
-  
+
   const filtered = allModelsList.filter((m) => {
     if (activeCategoryFilter === "featured") {
       if (!m.featured) return false;
@@ -348,7 +348,7 @@ function renderModelCards() {
 
 function selectModel(model) {
   selectedCustomModelId = model ? model.id : null;
-  
+
   if (overrideSelect) {
     overrideSelect.value = model ? `model:${model.id}` : "";
   }
@@ -531,7 +531,7 @@ function playChime(type) {
       osc.start(now);
       osc.stop(now + 0.06);
     }
-  } catch (_) {}
+  } catch (_) { }
 }
 
 // -------------------------------------------------------------
@@ -725,7 +725,7 @@ function stopSpeaking(triggerCallback = false) {
   if ("speechSynthesis" in window) {
     try {
       window.speechSynthesis.cancel();
-    } catch (_) {}
+    } catch (_) { }
   }
   if (activeSpeakerBtn) {
     activeSpeakerBtn.classList.remove("speaking");
@@ -992,7 +992,7 @@ if (SpeechRecognition) {
         if (shouldBeListening && !isListening) {
           try {
             recognition.start();
-          } catch (_) {}
+          } catch (_) { }
         }
       }, 100);
     } else {
@@ -1017,7 +1017,7 @@ function startListening() {
   } catch (_) {
     setTimeout(() => {
       if (shouldBeListening && !isListening) {
-        try { recognition.start(); } catch (_) {}
+        try { recognition.start(); } catch (_) { }
       }
     }, 150);
   }
@@ -1037,7 +1037,7 @@ function stopListening() {
   if (recognition) {
     try {
       recognition.stop();
-    } catch (_) {}
+    } catch (_) { }
   }
 }
 
@@ -1079,7 +1079,7 @@ function getAudioContext() {
     if (AudioCtx) liveAudioCtx = new AudioCtx();
   }
   if (liveAudioCtx && liveAudioCtx.state === "suspended") {
-    liveAudioCtx.resume().catch(() => {});
+    liveAudioCtx.resume().catch(() => { });
   }
   return liveAudioCtx;
 }
@@ -1123,7 +1123,7 @@ function playChime(type) {
       osc.start(now);
       osc.stop(now + 0.1);
     }
-  } catch (_) {}
+  } catch (_) { }
 }
 
 async function startMicVisualizer() {
@@ -1162,7 +1162,7 @@ async function startMicVisualizer() {
       liveAnimFrame = requestAnimationFrame(checkEnergy);
     }
     checkEnergy();
-  } catch (_) {}
+  } catch (_) { }
 }
 
 function stopMicVisualizer() {
@@ -1202,6 +1202,10 @@ function setLiveState(state, message = "") {
 // ============================================================
 function detectAndLaunchImmediate(text) {
   if (!text) return null;
+  // On the host PC itself, backend tryFastDispatch executes & reuses windows cleanly without duplicate tabs.
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    return null;
+  }
   const t = text.toLowerCase().trim().replace(/^(sia|hey sia|ok sia|jarvis)[,\s:]*/i, "");
 
   // 1. YouTube & Spotify Playback
@@ -1210,7 +1214,7 @@ function detectAndLaunchImmediate(text) {
     const q = encodeURIComponent(ytMatch[1].trim());
     const isSpot = (ytMatch[2] === "spotify") || ytMatch[1].toLowerCase().includes("song");
     const url = isSpot ? `https://open.spotify.com/search/${q}` : `https://www.youtube.com/results?search_query=${q}`;
-    try { window.open(url, "_blank"); } catch (_) {}
+    try { window.open(url, "_blank"); } catch (_) { }
     return { url, app: isSpot ? "Spotify" : "YouTube" };
   }
 
@@ -1220,7 +1224,7 @@ function detectAndLaunchImmediate(text) {
     const q = encodeURIComponent(shopMatch[1].trim());
     const isAmz = (shopMatch[2] === "amazon");
     const url = isAmz ? `https://www.amazon.com/s?k=${q}` : `https://www.flipkart.com/search?q=${q}`;
-    try { window.open(url, "_blank"); } catch (_) {}
+    try { window.open(url, "_blank"); } catch (_) { }
     return { url, app: isAmz ? "Amazon" : "Flipkart" };
   }
 
@@ -1252,11 +1256,11 @@ function detectAndLaunchImmediate(text) {
       whatsapp: "https://web.whatsapp.com"
     };
     if (WEB_MAP[app]) {
-      try { window.open(WEB_MAP[app], "_blank"); } catch (_) {}
+      try { window.open(WEB_MAP[app], "_blank"); } catch (_) { }
       return { url: WEB_MAP[app], app };
     } else if (app.includes(".com") || app.includes(".org") || app.includes(".in")) {
       const u = app.startsWith("http") ? app : `https://${app}`;
-      try { window.open(u, "_blank"); } catch (_) {}
+      try { window.open(u, "_blank"); } catch (_) { }
       return { url: u, app };
     }
   }
@@ -1266,7 +1270,7 @@ function detectAndLaunchImmediate(text) {
   if (searchMatch) {
     const q = encodeURIComponent(searchMatch[1].trim());
     const url = `https://www.google.com/search?q=${q}`;
-    try { window.open(url, "_blank"); } catch (_) {}
+    try { window.open(url, "_blank"); } catch (_) { }
     return { url, app: "Google" };
   }
 
@@ -1324,7 +1328,7 @@ async function dispatchLiveConversation(spokenText) {
   accumulatedTranscript = "";
   lastSpokenText = "";
   if (recognition) {
-    try { recognition.stop(); } catch (_) {}
+    try { recognition.stop(); } catch (_) { }
   }
 
   const cleanedCommand = cleanWakePrefix(spokenText) || spokenText;
@@ -1372,7 +1376,7 @@ async function dispatchLiveConversation(spokenText) {
         const resObj = step.result?.result || step.result;
         const targetUrl = resObj?.url || resObj?.openedUrl;
         if (targetUrl && typeof targetUrl === "string") {
-          try { window.open(targetUrl, "_blank"); } catch (_) {}
+          try { window.open(targetUrl, "_blank"); } catch (_) { }
         }
       }
     }
@@ -2118,7 +2122,7 @@ composer.addEventListener("submit", async (e) => {
         let eventData = {};
         try {
           eventData = JSON.parse(dataMatch[1].trim());
-        } catch (_) {}
+        } catch (_) { }
 
         if (eventName === "routing") {
           currentRouting = eventData;
@@ -2559,7 +2563,7 @@ if (SpeechRecognition && deviceMicBtn) {
     if (deviceShouldListen) {
       setTimeout(() => {
         if (deviceShouldListen && !deviceIsListening) {
-          try { deviceRecognition.start(); } catch (_) {}
+          try { deviceRecognition.start(); } catch (_) { }
         }
       }, 100);
     } else {
@@ -2581,7 +2585,7 @@ function startDeviceListening() {
   } catch (_) {
     setTimeout(() => {
       if (deviceShouldListen && !deviceIsListening) {
-        try { deviceRecognition.start(); } catch (_) {}
+        try { deviceRecognition.start(); } catch (_) { }
       }
     }, 150);
   }
@@ -2596,7 +2600,7 @@ function stopDeviceListening() {
   }
   setDeviceMicUI(false);
   if (deviceRecognition) {
-    try { deviceRecognition.stop(); } catch (_) {}
+    try { deviceRecognition.stop(); } catch (_) { }
   }
 }
 

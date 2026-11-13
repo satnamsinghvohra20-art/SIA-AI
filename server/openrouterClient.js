@@ -71,14 +71,21 @@ let accountTierState = {
   creditsRemaining: null,
   freeDailyRemaining: null,
   neverPurchasedCredits: false,
+  freeQuotaExhaustedUntil: 0,
 };
-const TIER_CACHE_TTL_MS = 5 * 60 * 1000;
+const TIER_CACHE_TTL_MS = 2 * 60 * 1000;
 
 // In-memory cache for quarantined / broken models: modelName -> { expiresAt, reason, status }
 const deadModelCache = new Map();
 
 // Live EWMA latency & health telemetry: modelName -> { calls, successes, failures, avgLatencyMs, lastLatencyMs, lastStatus, lastError, updatedAt }
 const modelHealthStats = new Map();
+const globalMetrics = {
+  totalCalls: 0,
+  totalSuccesses: 0,
+  totalFailures: 0,
+  retryCount: 0,
+};
 
 function isModelFree(modelId = "") {
   return modelId.endsWith(":free") || modelId === "openrouter/free";
@@ -116,7 +123,7 @@ async function refreshAccountTier(force = false) {
       };
       console.log(
         `[OpenRouter Tier] Account mode: ${accountTierState.isFreeTier ? "FREE-FRONTIER ($0)" : "PAID-FRONTIER"}` +
-          (accountTierState.freeDailyRemaining !== null ? ` (free daily remaining: ${accountTierState.freeDailyRemaining})` : "")
+        (accountTierState.freeDailyRemaining !== null ? ` (free daily remaining: ${accountTierState.freeDailyRemaining})` : "")
       );
     }
   } catch (err) {
@@ -151,6 +158,10 @@ function quarantineModel(model, reason, status = 0) {
 }
 
 function recordModelOutcome(model, { ok, latencyMs, status = 200, error = null }) {
+  globalMetrics.totalCalls += 1;
+  if (ok) globalMetrics.totalSuccesses += 1;
+  else globalMetrics.totalFailures += 1;
+
   const prev = modelHealthStats.get(model) || {
     calls: 0,
     successes: 0,
@@ -205,9 +216,19 @@ function getModelHealthReport() {
       quarantined.push({ id, status: q.status, reason: q.reason, remainingSec: Math.round((q.expiresAt - Date.now()) / 1000) });
     }
   }
+  const completionRate =
+    globalMetrics.totalCalls > 0
+      ? Number(((globalMetrics.totalSuccesses / globalMetrics.totalCalls) * 100).toFixed(1))
+      : 100;
+
   return {
     tier: isFreeTierAccount() ? "free" : "paid",
     account: accountTierState,
+    summary: {
+      ...globalMetrics,
+      completionRatePct: completionRate,
+      errorRatePct: Number((100 - completionRate).toFixed(1)),
+    },
     quarantined,
     models: stats,
   };
@@ -316,15 +337,50 @@ async function fetchWithTimeout(url, options, timeoutMs = 10000, externalSignal 
   }
 }
 
+/**
+ * Retries transient 5xx / network errors up to maxRetries with exponential backoff.
+ */
+async function fetchWithTransientRetry(makeFetch, { maxRetries = 1, baseDelayMs = 250, signal = null } = {}) {
+  let attempt = 0;
+  while (true) {
+    try {
+      const res = await makeFetch();
+      if ((res.status >= 500 || res.status === 408) && attempt < maxRetries && !signal?.aborted) {
+        attempt += 1;
+        globalMetrics.retryCount += 1;
+        await new Promise((r) => setTimeout(r, baseDelayMs * Math.pow(2, attempt - 1)));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      if (signal?.aborted || attempt >= maxRetries) throw err;
+      attempt += 1;
+      globalMetrics.retryCount += 1;
+      await new Promise((r) => setTimeout(r, baseDelayMs * Math.pow(2, attempt - 1)));
+    }
+  }
+}
+
 function handleErrorStatus(currentModel, status, errText) {
   const lower = (errText || "").toLowerCase();
   if (status === 402 && (lower.includes("never purchased credits") || lower.includes("insufficient credits"))) {
     accountTierState.isFreeTier = true;
     accountTierState.neverPurchasedCredits = true;
     quarantineModel(currentModel, errText.slice(0, 120), 402);
+  } else if (status === 429 && (lower.includes("free-models-per-day") || lower.includes("per-day"))) {
+    accountTierState.freeDailyRemaining = 0;
+    accountTierState.freeQuotaExhaustedUntil = Date.now() + 2 * 60 * 1000;
+    quarantineModel(currentModel, "daily free quota exhausted", 429);
   } else if (status === 403 || status === 404 || status === 410 || status === 429 || status >= 500) {
     quarantineModel(currentModel, errText.slice(0, 120), status);
   }
+}
+
+function isFreeQuotaExhausted() {
+  return (
+    isFreeTierAccount() &&
+    (accountTierState.freeDailyRemaining === 0 || Date.now() < (accountTierState.freeQuotaExhaustedUntil || 0))
+  );
 }
 
 /**
@@ -357,6 +413,10 @@ async function streamOpenRouterCompletion({
 
   for (const currentModel of modelsToTry) {
     if (signal?.aborted) throw new Error("Stream aborted by client.");
+    if (isFreeQuotaExhausted() && isModelFree(currentModel)) {
+      console.warn("[OpenRouter Stream] Daily free quota exhausted (0 remaining). Skipping wasted retries -> local engine.");
+      break;
+    }
     let effectiveMaxTokens = max_tokens;
     const tStart = Date.now();
     let emittedOutput = false;
@@ -385,7 +445,7 @@ async function streamOpenRouterCompletion({
           signal
         );
 
-      let response = await makeRequest(effectiveMaxTokens);
+      let response = await fetchWithTransientRetry(() => makeRequest(effectiveMaxTokens));
 
       if (!response.ok) {
         const errText = await response.text().catch(() => "");
@@ -492,7 +552,7 @@ async function streamOpenRouterCompletion({
             if (delta.content) {
               processContentDelta(delta.content);
             }
-          } catch (_) {}
+          } catch (_) { }
         }
       }
 
@@ -582,6 +642,10 @@ async function callOpenRouter({
   let lastError = null;
 
   for (const currentModel of modelsToTry) {
+    if (isFreeQuotaExhausted() && isModelFree(currentModel)) {
+      console.warn("[OpenRouter] Daily free quota exhausted (0 remaining). Skipping wasted retries -> local engine.");
+      break;
+    }
     let effectiveMaxTokens = max_tokens;
     const tStart = Date.now();
     try {
@@ -607,7 +671,7 @@ async function callOpenRouter({
           15000
         );
 
-      let response = await makeRequest(effectiveMaxTokens);
+      let response = await fetchWithTransientRetry(() => makeRequest(effectiveMaxTokens));
 
       if (!response.ok) {
         const errText = await response.text().catch(() => "");
@@ -691,6 +755,10 @@ async function callOpenRouterWithTools({ model, messages, tools, max_tokens = 20
   let lastError = null;
 
   for (const currentModel of modelsToTry) {
+    if (isFreeQuotaExhausted() && isModelFree(currentModel)) {
+      console.warn("[OpenRouter ToolAgent] Daily free quota exhausted (0 remaining). Skipping wasted retries -> local engine.");
+      break;
+    }
     const tStart = Date.now();
     try {
       const response = await fetchWithTimeout(

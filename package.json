@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "node --test"
+    "test": "node --test",
+    "daemon": "node scripts/sia247Daemon.js",
+    "status": "node scripts/status.js"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",

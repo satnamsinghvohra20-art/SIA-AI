@@ -6,6 +6,13 @@ const { getModelForCategory } = require("../modelRegistry");
 const DATA_DIR = path.join(__dirname, "..", "..", "data");
 const GLOBAL_KNOWLEDGE_PATH = path.join(DATA_DIR, "knowledge.json");
 const SESSIONS_DIR = path.join(DATA_DIR, "sessions");
+const SESSION_ID_PATTERN = /^[a-zA-Z0-9_-]{1,128}$/;
+
+function assertValidSessionId(sessionId) {
+  if (typeof sessionId !== "string" || !SESSION_ID_PATTERN.test(sessionId)) {
+    throw new Error(`Invalid sessionId: ${JSON.stringify(sessionId)}`);
+  }
+}
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -14,6 +21,7 @@ function ensureDataDir() {
 }
 
 function sessionKnowledgePath(sessionId) {
+  assertValidSessionId(sessionId);
   const dir = path.join(SESSIONS_DIR, sessionId);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   return path.join(dir, "knowledge.json");
@@ -29,6 +37,7 @@ function defaultKnowledge() {
     contacts: {},
     projects: {},
     facts: [],
+    verified_fixes: [],
     last_updated: new Date().toISOString(),
   };
 }
@@ -202,6 +211,32 @@ If no new persistent information was shared, return:
 /**
  * Formats knowledge graph into a concise context block for Sia's system prompt.
  */
+function addVerifiedFix(sessionId, issue, resolution, source = "agent_recovery") {
+  if (!issue || !resolution) return null;
+  const k = readKnowledge(sessionId);
+  if (!Array.isArray(k.verified_fixes)) k.verified_fixes = [];
+  const normIssue = String(issue).trim();
+  const normRes = String(resolution).trim();
+  const existing = k.verified_fixes.find((f) => f.issue.toLowerCase() === normIssue.toLowerCase());
+  const now = new Date().toISOString();
+  if (existing) {
+    existing.resolution = normRes;
+    existing.source = source;
+    existing.updated_at = now;
+  } else {
+    k.verified_fixes.push({
+      id: `fix_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      issue: normIssue,
+      resolution: normRes,
+      source,
+      created_at: now,
+      updated_at: now,
+    });
+    if (k.verified_fixes.length > 50) k.verified_fixes = k.verified_fixes.slice(-50);
+  }
+  return writeKnowledge(sessionId, k);
+}
+
 function formatKnowledgeForPrompt(sessionId) {
   const k = readKnowledge(sessionId);
   const sections = [];
@@ -225,6 +260,11 @@ function formatKnowledgeForPrompt(sessionId) {
     sections.push(`Active Projects: ${projects.map(([k, v]) => `${k}: ${v}`).join("; ")}`);
   }
 
+  if (Array.isArray(k.verified_fixes) && k.verified_fixes.length > 0) {
+    const recentFixes = k.verified_fixes.slice(-5).map((f) => `- ${f.issue} => ${f.resolution}`);
+    sections.push(`Verified Failure Resolutions:\n${recentFixes.join("\n")}`);
+  }
+
   if (k.facts.length > 0) {
     const recentFacts = k.facts.slice(-8).map((f) => `- ${f.text}`);
     sections.push(`Key User Facts:\n${recentFacts.join("\n")}`);
@@ -238,6 +278,7 @@ module.exports = {
   writeKnowledge,
   addFact,
   deleteFact,
+  addVerifiedFix,
   extractAndSyncKnowledge,
   formatKnowledgeForPrompt,
 };
